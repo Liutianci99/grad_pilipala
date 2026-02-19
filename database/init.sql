@@ -45,6 +45,22 @@ CREATE TABLE IF NOT EXISTS `mall` (
   FOREIGN KEY (`product_id`) REFERENCES `inventory`(`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 创建地址表（必须在orders之前创建）
+CREATE TABLE IF NOT EXISTS `address` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '地址ID',
+  `user_id` INT NOT NULL COMMENT '用户ID（顾客）',
+  `receiver_name` VARCHAR(50) NOT NULL COMMENT '收货人姓名',
+  `receiver_phone` VARCHAR(20) NOT NULL COMMENT '收货人电话',
+  `province` VARCHAR(50) NOT NULL COMMENT '省份',
+  `city` VARCHAR(50) NOT NULL COMMENT '城市',
+  `district` VARCHAR(50) NOT NULL COMMENT '区/县',
+  `detail_address` VARCHAR(255) NOT NULL COMMENT '详细地址',
+  `latitude` DECIMAL(10, 7) COMMENT '纬度',
+  `longitude` DECIMAL(10, 7) COMMENT '经度',
+  `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认地址：0-否，1-是',
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收货地址表';
+
 -- 创建订单表
 CREATE TABLE `orders` (
   `order_id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '订单ID',
@@ -70,22 +86,6 @@ CREATE TABLE `orders` (
   FOREIGN KEY (`merchant_id`) REFERENCES `users`(`id`),
   FOREIGN KEY (`address_id`) REFERENCES `address`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
-
--- 创建地址表
-CREATE TABLE IF NOT EXISTS `address` (
-  `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '地址ID',
-  `user_id` INT NOT NULL COMMENT '用户ID（顾客）',
-  `receiver_name` VARCHAR(50) NOT NULL COMMENT '收货人姓名',
-  `receiver_phone` VARCHAR(20) NOT NULL COMMENT '收货人电话',
-  `province` VARCHAR(50) NOT NULL COMMENT '省份',
-  `city` VARCHAR(50) NOT NULL COMMENT '城市',
-  `district` VARCHAR(50) NOT NULL COMMENT '区/县',
-  `detail_address` VARCHAR(255) NOT NULL COMMENT '详细地址',
-  `latitude` DECIMAL(10, 7) COMMENT '纬度',
-  `longitude` DECIMAL(10, 7) COMMENT '经度',
-  `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认地址：0-否，1-是',
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收货地址表';
 
 -- 创建仓库表
 CREATE TABLE IF NOT EXISTS `warehouse` (
