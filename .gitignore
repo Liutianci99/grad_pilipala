@@ -1,0 +1,48 @@
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+application-local.yml
+
+# ===== Java / Maven =====
+backend/target/
+*.class
+*.jar
+*.war
+*.log
+*.iml
+.idea/
+*.swp
+
+# ===== Node / Frontend =====
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+*.tmp
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ===== Logs =====
+logs/
+*.log
+backend-run.log
+
+# ===== Docker =====
+docker-compose.override.yml
+
+# ===== Misc =====
+package-lock.json
+pnpm-lock.yaml
+test_db.sh
+docs/
