@@ -1,28 +1,84 @@
--- 创建数据库
-CREATE DATABASE IF NOT EXISTS `ecommerce_logistics` DEFAULT CHARSET utf8mb4;
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
 
--- 创建user表
+-- 创建数据库
+CREATE DATABASE IF NOT EXISTS `ecommerce_logistics` DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `ecommerce_logistics`;
+
+-- 用户表
 CREATE TABLE IF NOT EXISTS `users` (
   `id` INT PRIMARY KEY AUTO_INCREMENT,
   `username` VARCHAR(20) NOT NULL,
   `password` VARCHAR(100) NOT NULL,
   `role` ENUM('merchant','driver','consumer','admin') NOT NULL
-
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 插入初始数据（不写 id，避免主键冲突）
--- 密码: 123 (BCrypt加密)
+-- BCrypt hash of "123"
 INSERT INTO `users` (`username`,`password`,`role`) VALUES
+('admin','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','admin'),
+('张商户','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','merchant'),
+('李配送','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','driver'),
+('王消费','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','consumer'),
 ('刘天赐','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','merchant'),
 ('刘天赐','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','driver'),
 ('刘天赐','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','consumer'),
 ('刘天赐','$2a$10$plrVTP6AlVFrM2QWZnWiguiqrxkbsl2IscIn.AUfyDVR08JEzM9q2','admin');
 
--- 创建库存表
+-- 仓库表
+CREATE TABLE IF NOT EXISTS `warehouse` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `name` VARCHAR(50) NOT NULL,
+  `city` VARCHAR(20) NOT NULL,
+  `address` VARCHAR(200),
+  `longitude` DECIMAL(10,6),
+  `latitude` DECIMAL(10,6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `warehouse` VALUES
+(1,'华北一号仓','北京','北京市大兴区亦庄开发区',116.527834,39.793421),
+(2,'华东中心仓','上海','上海市嘉定区江桥镇物流园',121.329876,31.302547),
+(3,'华南智能仓','广州','广州市白云区太和镇物流基地',113.298765,23.256432),
+(4,'西南枢纽仓','成都','成都市双流区航空港物流园',104.023456,30.567891),
+(5,'华中分拨仓','武汉','武汉市东西湖区保税物流园',114.134567,30.678912);
+
+-- 配送员表
+CREATE TABLE IF NOT EXISTS `delivery_personnel` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `warehouse_id` INT NOT NULL,
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`),
+  FOREIGN KEY (`warehouse_id`) REFERENCES `warehouse`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `delivery_personnel` VALUES (1, 3, 1), (2, 6, 2);
+
+-- 地址表
+CREATE TABLE IF NOT EXISTS `address` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `receiver_name` VARCHAR(50) NOT NULL,
+  `phone` VARCHAR(20) NOT NULL,
+  `province` VARCHAR(20),
+  `city` VARCHAR(20),
+  `district` VARCHAR(20),
+  `detail` VARCHAR(200),
+  `is_default` TINYINT(1) DEFAULT 0,
+  `longitude` DECIMAL(10,6),
+  `latitude` DECIMAL(10,6),
+  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO `address` (`user_id`,`receiver_name`,`phone`,`province`,`city`,`district`,`detail`,`is_default`,`longitude`,`latitude`) VALUES
+(4,'王消费','13800001111','北京','北京市','朝阳区','建国路88号',1,116.472017,39.920843),
+(4,'王消费','13800001111','上海','上海市','浦东新区','陆家嘴环路1000号',0,121.499718,31.239703),
+(7,'刘天赐','13900002222','广州','广州市','天河区','天河路385号',1,113.330803,23.137024),
+(7,'刘天赐','13900002222','北京','北京市','海淀区','中关村大街1号',0,116.310905,39.992806);
+
+-- 库存表
 CREATE TABLE IF NOT EXISTS `inventory` (
   `product_id` INT PRIMARY KEY AUTO_INCREMENT,
   `user_id` INT NOT NULL,
-  `warehouse_id` INT NOT NULL DEFAULT 1 COMMENT '所属仓库ID',
+  `warehouse_id` INT NOT NULL DEFAULT 1,
   `product_name` VARCHAR(100) NOT NULL,
   `quantity` INT NOT NULL DEFAULT 0,
   `stock_in_date` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -31,159 +87,109 @@ CREATE TABLE IF NOT EXISTS `inventory` (
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 创建商城表
+INSERT INTO `inventory` (`user_id`,`warehouse_id`,`product_name`,`quantity`,`stock_in_date`,`is_published`) VALUES
+(2,1,'小米14 Ultra手机',50,'2026-01-15 10:00:00',1),
+(2,1,'华为MatePad Pro平板',30,'2026-01-16 14:00:00',1),
+(2,2,'索尼WH-1000XM5耳机',100,'2026-01-17 09:00:00',1),
+(2,1,'戴森V15吸尘器',20,'2026-01-18 11:00:00',1),
+(5,3,'MacBook Pro 16寸',15,'2026-01-20 08:00:00',1),
+(5,2,'iPad Air 6',40,'2026-01-21 10:00:00',1),
+(5,1,'AirPods Pro 3',200,'2026-01-22 09:00:00',1),
+(2,4,'小米电动滑板车',25,'2026-02-01 10:00:00',0),
+(5,5,'Switch 2游戏机',60,'2026-02-05 14:00:00',1);
+
+-- 商城表
 CREATE TABLE IF NOT EXISTS `mall` (
   `product_id` INT PRIMARY KEY,
-  `warehouse_id` INT NOT NULL DEFAULT 1 COMMENT '所属仓库ID',
+  `warehouse_id` INT NOT NULL DEFAULT 1,
   `product_name` VARCHAR(100) NOT NULL,
   `description` TEXT,
   `available_quantity` INT NOT NULL DEFAULT 0,
-  `price` DECIMAL(10, 2) NOT NULL,
+  `price` DECIMAL(10,2) NOT NULL,
   `is_published` TINYINT(1) NOT NULL DEFAULT 1,
   `publish_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `image_url` VARCHAR(255),
   FOREIGN KEY (`product_id`) REFERENCES `inventory`(`product_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 创建地址表（必须在orders之前创建）
-CREATE TABLE IF NOT EXISTS `address` (
-  `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '地址ID',
-  `user_id` INT NOT NULL COMMENT '用户ID（顾客）',
-  `receiver_name` VARCHAR(50) NOT NULL COMMENT '收货人姓名',
-  `receiver_phone` VARCHAR(20) NOT NULL COMMENT '收货人电话',
-  `province` VARCHAR(50) NOT NULL COMMENT '省份',
-  `city` VARCHAR(50) NOT NULL COMMENT '城市',
-  `district` VARCHAR(50) NOT NULL COMMENT '区/县',
-  `detail_address` VARCHAR(255) NOT NULL COMMENT '详细地址',
-  `latitude` DECIMAL(10, 7) COMMENT '纬度',
-  `longitude` DECIMAL(10, 7) COMMENT '经度',
-  `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否默认地址：0-否，1-是',
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收货地址表';
+INSERT INTO `mall` VALUES
+(1,1,'小米14 Ultra手机','骁龙8 Gen3，徕卡影像，5000mAh大电池',50,5999.00,1,'2026-01-15 12:00:00',NULL),
+(2,1,'华为MatePad Pro平板','12.6英寸OLED屏，麒麟9000S芯片',30,4999.00,1,'2026-01-16 15:00:00',NULL),
+(3,2,'索尼WH-1000XM5耳机','行业领先降噪，30小时续航',100,2499.00,1,'2026-01-17 10:00:00',NULL),
+(4,1,'戴森V15吸尘器','激光探测灰尘，智能吸力调节',20,4990.00,1,'2026-01-18 12:00:00',NULL),
+(5,3,'MacBook Pro 16寸','M4 Pro芯片，36GB内存，1TB存储',15,19999.00,1,'2026-01-20 09:00:00',NULL),
+(6,2,'iPad Air 6','M3芯片，10.9英寸，支持Apple Pencil',40,4799.00,1,'2026-01-21 11:00:00',NULL),
+(7,1,'AirPods Pro 3','主动降噪，空间音频，USB-C充电',200,1899.00,1,'2026-01-22 10:00:00',NULL),
+(9,5,'Switch 2游戏机','次世代掌机，4K输出，向下兼容',60,2599.00,1,'2026-02-05 15:00:00',NULL);
 
--- 创建订单表
-CREATE TABLE `orders` (
-  `order_id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '订单ID',
-  `warehouse_id` INT NOT NULL DEFAULT 1 COMMENT '发货仓库ID',
-  `product_id` INT NOT NULL COMMENT '商品ID',
-  `customer_id` INT NOT NULL COMMENT '顾客ID',
-  `merchant_id` INT NOT NULL COMMENT '商户ID',
-  `address_id` INT COMMENT '收货地址ID',
-  `product_name` VARCHAR(100) NOT NULL COMMENT '商品名称',
-  `quantity` INT NOT NULL COMMENT '商品数量',
-  `unit_price` DECIMAL(10, 2) NOT NULL COMMENT '商品单价',
-  `total_amount` DECIMAL(10, 2) NOT NULL COMMENT '总金额',
-  `image_url` VARCHAR(255) COMMENT '商品图片URL',
-  `status` INT NOT NULL DEFAULT 0 COMMENT '订单状态：-1=取消订单，0=未发货，1=已发货，2=已揽收，3=运输中，4=已到达，5=已收货，6=待评价，7=已评价',
-  `order_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
-  `ship_time` DATETIME COMMENT '发货时间',
-  `pickup_time` DATETIME COMMENT '揽收时间',
-  `delivery_time` DATETIME COMMENT '送达时间',
-  `receive_time` DATETIME COMMENT '收货时间',
-  `review_time` DATETIME COMMENT '评价时间',
-  FOREIGN KEY (`product_id`) REFERENCES `mall`(`product_id`),
-  FOREIGN KEY (`customer_id`) REFERENCES `users`(`id`),
-  FOREIGN KEY (`merchant_id`) REFERENCES `users`(`id`),
-  FOREIGN KEY (`address_id`) REFERENCES `address`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
-
--- 创建仓库表
-CREATE TABLE IF NOT EXISTS `warehouse` (
-  `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '仓库ID',
-  `name` VARCHAR(100) NOT NULL COMMENT '仓库名称',
-  `city` VARCHAR(50) NOT NULL COMMENT '所在城市',
-  `address` VARCHAR(255) NOT NULL COMMENT '详细地址',
-  `longitude` DECIMAL(10, 6) NOT NULL COMMENT '经度',
-  `latitude` DECIMAL(10, 6) NOT NULL COMMENT '纬度'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='仓库表';
-
--- 插入仓库数据
-INSERT INTO `warehouse` (`name`, `city`, `address`, `longitude`, `latitude`) VALUES
-('华北一号仓', '北京', '北京市大兴区亦庄开发区', 116.527834, 39.793421),
-('华东中心仓', '上海', '上海市嘉定区江桥镇物流园', 121.329876, 31.302547),
-('华南智能仓', '广州', '广州市白云区太和镇物流基地', 113.298765, 23.256432),
-('西南枢纽仓', '成都', '成都市双流区航空港物流园', 104.023456, 30.567891),
-('华中分拨仓', '武汉', '武汉市东西湖区保税物流园', 114.134567, 30.678912),
-('华东电商仓', '杭州', '杭州市余杭区仁和街道菜鸟仓', 120.187654, 30.432109),
-('华南冷链仓', '深圳', '深圳市龙岗区平湖物流基地', 114.123456, 22.678901),
-('西北区域仓', '西安', '西安市未央区草滩物流园', 108.923456, 34.345678),
-('东北转运仓', '沈阳', '沈阳市于洪区沙岭物流园', 123.345678, 41.789012),
-('华东前置仓', '苏州', '苏州市相城区澄阳路电商园', 120.654321, 31.398765);
-
--- 创建配送员表
-CREATE TABLE IF NOT EXISTS `delivery_personnel` (
-  `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '配送员ID',
-  `user_id` INT NOT NULL COMMENT '用户ID',
-  `warehouse_id` INT NOT NULL COMMENT '所属仓库ID',
+-- 订单表
+CREATE TABLE IF NOT EXISTS `orders` (
+  `order_id` INT PRIMARY KEY AUTO_INCREMENT,
+  `warehouse_id` INT NOT NULL DEFAULT 1,
+  `user_id` INT NOT NULL,
+  `product_id` INT NOT NULL,
+  `product_name` VARCHAR(100),
+  `quantity` INT NOT NULL DEFAULT 1,
+  `total_price` DECIMAL(10,2),
+  `address_id` INT,
+  `status` INT NOT NULL DEFAULT 0 COMMENT '0待发货 1已发货 2已取件 3配送中 4已送达 5已完成',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`),
-  FOREIGN KEY (`warehouse_id`) REFERENCES `warehouse`(`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='配送员表';
+  FOREIGN KEY (`product_id`) REFERENCES `inventory`(`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 插入配送员数据（将现有的driver角色用户关联到仓库）
-INSERT INTO `delivery_personnel` (`user_id`, `warehouse_id`) 
-SELECT u.id, 1 FROM `users` u WHERE u.role = 'driver';
+INSERT INTO `orders` (`warehouse_id`,`user_id`,`product_id`,`product_name`,`quantity`,`total_price`,`address_id`,`status`,`create_time`) VALUES
+(1,4,1,'小米14 Ultra手机',1,5999.00,1,5,'2026-01-20 14:00:00'),
+(1,4,7,'AirPods Pro 3',2,3798.00,1,5,'2026-01-23 10:00:00'),
+(2,4,3,'索尼WH-1000XM5耳机',1,2499.00,2,4,'2026-01-25 16:00:00'),
+(1,7,2,'华为MatePad Pro平板',1,4999.00,3,5,'2026-01-28 09:00:00'),
+(3,7,5,'MacBook Pro 16寸',1,19999.00,3,3,'2026-02-01 11:00:00'),
+(1,4,4,'戴森V15吸尘器',1,4990.00,1,2,'2026-02-05 14:00:00'),
+(2,7,6,'iPad Air 6',1,4799.00,4,1,'2026-02-10 10:00:00'),
+(5,4,9,'Switch 2游戏机',2,5198.00,2,0,'2026-02-15 09:00:00'),
+(1,7,1,'小米14 Ultra手机',1,5999.00,3,0,'2026-02-18 16:00:00'),
+(1,4,7,'AirPods Pro 3',1,1899.00,1,0,'2026-02-19 08:00:00');
 
--- 创建运输批次主表
+-- 配送批次表
 CREATE TABLE IF NOT EXISTS `delivery_batches` (
-  `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '运输批次ID',
-  `driver_id` INT NOT NULL COMMENT '配送员ID',
-  `warehouse_id` INT NOT NULL COMMENT '起始仓库ID',
-  `status` TINYINT NOT NULL DEFAULT 0 COMMENT '0=待出发, 1=配送中, 2=已完成',
-  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `started_at` DATETIME COMMENT '实际出发时间',
-  `completed_at` DATETIME COMMENT '完成时间',
-  `route_polyline` TEXT COMMENT '高德返回的编码路线字符串（用于前端绘图）',
-  `total_duration` INT COMMENT '预计总耗时（秒）',
-  `total_distance` INT COMMENT '总距离（米）',
-  FOREIGN KEY (`driver_id`) REFERENCES `delivery_personnel`(`id`) ON DELETE RESTRICT,
-  FOREIGN KEY (`warehouse_id`) REFERENCES `warehouse`(`id`) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运输批次主表';
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `driver_id` INT NOT NULL,
+  `warehouse_id` INT NOT NULL,
+  `status` VARCHAR(20) DEFAULT 'pending',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `start_time` DATETIME,
+  `end_time` DATETIME,
+  FOREIGN KEY (`warehouse_id`) REFERENCES `warehouse`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 创建运输批次订单关联表
+-- 配送批次订单关联表
 CREATE TABLE IF NOT EXISTS `delivery_batch_orders` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
   `batch_id` INT NOT NULL,
   `order_id` INT NOT NULL,
-  `stop_sequence` TINYINT NOT NULL COMMENT '高德返回的最优停靠顺序（1,2,3...）',
-  PRIMARY KEY (`batch_id`, `order_id`),
-  UNIQUE KEY `uk_batch_stop_seq` (`batch_id`, `stop_sequence`),
-  FOREIGN KEY (`batch_id`) REFERENCES `delivery_batches`(`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`order_id`) REFERENCES `orders`(`order_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运输批次包含的订单及停靠顺序';
+  `sequence` INT DEFAULT 0,
+  FOREIGN KEY (`batch_id`) REFERENCES `delivery_batches`(`id`),
+  FOREIGN KEY (`order_id`) REFERENCES `orders`(`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- ============================================================
--- 配送员实时追踪系统表（2026-02-03新增）
--- ============================================================
-
--- 配送路线表（存储路线规划结果和实时状态）
-CREATE TABLE IF NOT EXISTS `delivery_route` (
-  `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
-  `delivery_time` DATETIME NOT NULL COMMENT '配送批次时间',
-  `warehouse_id` INT NOT NULL COMMENT '仓库ID',
-  `route_data` TEXT NOT NULL COMMENT '路线数据(polyline压缩坐标JSON数组)',
-  `total_distance` DECIMAL(10, 2) COMMENT '总距离(公里)',
-  `total_duration` INT COMMENT '总时长(分钟)',
-  `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态: PENDING=待开始, DELIVERING=运输中, COMPLETED=已完成, STOPPED=已停止',
-  `current_index` INT DEFAULT 0 COMMENT '当前路径点索引',
-  `started_at` DATETIME COMMENT '开始时间',
-  `completed_at` DATETIME COMMENT '完成时间',
-  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  INDEX `idx_delivery_time` (`delivery_time`),
-  INDEX `idx_warehouse_id` (`warehouse_id`),
-  INDEX `idx_status` (`status`),
-  UNIQUE KEY `uk_delivery_warehouse` (`delivery_time`, `warehouse_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='配送路线表-存储路线规划和实时状态';
-
--- 配送位置记录表（记录配送员历史轨迹）
+-- 配送位置表
 CREATE TABLE IF NOT EXISTS `delivery_location` (
-  `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
-  `route_id` BIGINT NOT NULL COMMENT '路线ID',
-  `latitude` DECIMAL(10, 7) NOT NULL COMMENT '纬度',
-  `longitude` DECIMAL(10, 7) NOT NULL COMMENT '经度',
-  `address` VARCHAR(500) COMMENT '地址（通过逆地理编码获取）',
-  `path_index` INT NOT NULL COMMENT '路径点索引',
-  `recorded_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
-  INDEX `idx_route_id` (`route_id`),
-  INDEX `idx_recorded_at` (`recorded_at`),
-  FOREIGN KEY (`route_id`) REFERENCES `delivery_route`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='配送位置记录表-记录配送员历史轨迹';
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `batch_id` INT NOT NULL,
+  `longitude` DECIMAL(10,6),
+  `latitude` DECIMAL(10,6),
+  `timestamp` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`batch_id`) REFERENCES `delivery_batches`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 配送路线表
+CREATE TABLE IF NOT EXISTS `delivery_route` (
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `batch_id` INT NOT NULL,
+  `route_data` JSON,
+  `total_distance` DECIMAL(10,2),
+  `total_duration` INT,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`batch_id`) REFERENCES `delivery_batches`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
