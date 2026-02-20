@@ -319,8 +319,8 @@ public class DeliveryBatchController {
             DeliveryRoute route = deliveryRouteService.getByBatchId(batchId);
             if (route != null) {
                 JSONArray polyline = JSON.parseArray(route.getRouteData());
-                resultObj.put(\"totalDistance\", route.getTotalDistance());
-                resultObj.put(\"totalDuration\", route.getTotalDuration());
+                resultObj.put("totalDistance", route.getTotalDistance());
+                resultObj.put("totalDuration", route.getTotalDuration());
 
                 // Detect format: [{lng,lat,name}] (fake/waypoint) vs [num,num,...] (compressed)
                 boolean isWaypointFormat = !polyline.isEmpty() && polyline.get(0) instanceof com.alibaba.fastjson2.JSONObject;
