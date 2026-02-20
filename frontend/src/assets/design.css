@@ -10,7 +10,8 @@
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
 
 /* Search */
-.search-box { flex: 1; max-width: 360px; display: flex; gap: 8px; }
+.search-box { display: flex; gap: 8px; }
+.filter-bar .search-box { flex: 1; }
 .search-input {
     flex: 1; height: 36px; padding: 0 12px;
     border: 1px solid #eff3f4; border-radius: 9999px;
@@ -41,10 +42,10 @@
 .card:hover { border-color: #cfd9de; }
 
 /* Filter bar */
-.filter-bar { background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.filter-bar { background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
 
 /* Tabs */
-.tabs { display: flex; gap: 4px; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .tab {
     padding: 6px 16px; background: transparent; color: #536471;
     border: none; border-radius: 9999px; font-size: 13px; font-weight: 600;
