@@ -99,12 +99,15 @@
                         <div class="info-card-sub" v-if="trackingData.warehouseAddress">{{ trackingData.warehouseAddress }}</div>
                     </div>
                 </div>
-                <div class="info-card">
+                <div class="info-card" v-if="orderAddress">
                     <div class="info-card-icon">📦</div>
                     <div class="info-card-content">
                         <div class="info-card-label">收货地址</div>
                         <div class="info-card-value">
-                            {{ selectedOrder.address?.province }}{{ selectedOrder.address?.city }}{{ selectedOrder.address?.district }}{{ selectedOrder.address?.detailAddress }}
+                            {{ orderAddress.receiverName }} {{ orderAddress.receiverPhone }}
+                        </div>
+                        <div class="info-card-sub">
+                            {{ orderAddress.province }}{{ orderAddress.city }}{{ orderAddress.district }}{{ orderAddress.detailAddress }}
                         </div>
                     </div>
                 </div>
@@ -189,6 +192,7 @@ const currentTab = ref('all')
 const orders = ref([])
 const selectedOrder = ref(null)
 const trackingData = ref({})
+const addresses = ref([])
 
 let map = null
 let truckMarker = null
@@ -199,6 +203,16 @@ let pollingTimer = null
 const statusMap = {
     all: null, unpaid: 0, shipped: 1, picked: 2, transit: 3, arrived: 4, received: 5
 }
+
+// Resolve address: match by addressId, fall back to default address
+const orderAddress = computed(() => {
+    if (!selectedOrder.value) return null
+    const addrId = selectedOrder.value.addressId
+    const matched = addresses.value.find(a => a.id === addrId)
+    if (matched) return matched
+    // Fall back to default address
+    return addresses.value.find(a => a.isDefault) || addresses.value[0] || null
+})
 
 const filteredOrders = computed(() => {
     let list = orders.value
@@ -215,6 +229,11 @@ const filteredOrders = computed(() => {
     }
     return list
 })
+
+const loadAddresses = async () => {
+    const res = await request.get('/address/list')
+    if (res.code === 200) addresses.value = res.data || []
+}
 
 const loadOrders = async () => {
     loading.value = true
@@ -317,7 +336,8 @@ const initMap = async (data, order) => {
         }
     }
 
-    if (order.address?.latitude && order.address?.longitude) {
+    const addr = orderAddress.value
+    if (addr?.latitude && addr?.longitude) {
         destMarker = new TMap.MultiMarker({
             map,
             styles: {
@@ -328,7 +348,7 @@ const initMap = async (data, order) => {
                     )
                 })
             },
-            geometries: [{ id: 'dest', styleId: 'dest', position: new TMap.LatLng(order.address.latitude, order.address.longitude) }]
+            geometries: [{ id: 'dest', styleId: 'dest', position: new TMap.LatLng(addr.latitude, addr.longitude) }]
         })
     }
 
@@ -407,8 +427,7 @@ const formatRemainingTime = (min) => {
 }
 
 onMounted(async () => {
-    await loadOrders()
-    // If URL has orderId, load detail directly
+    await Promise.all([loadOrders(), loadAddresses()])
     if (route.params.orderId) {
         loadOrderDetail(route.params.orderId)
     }
