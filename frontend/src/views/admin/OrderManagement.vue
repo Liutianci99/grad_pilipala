@@ -67,6 +67,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const orders = ref([])
 const searchKeyword = ref('')
@@ -79,7 +80,7 @@ const loadOrders = async () => {
         if (searchKeyword.value) params.search = searchKeyword.value
         const res = await request.get('/admin/orders', { params })
         if (res.code === 200) orders.value = res.data || []
-    } catch (e) { console.error(e) }
+    } catch (e) { /* handled */ }
 }
 
 const changeStatus = (s) => { currentStatus.value = s; loadOrders() }
@@ -100,24 +101,22 @@ const formatTime = (t) => {
 
 const updateStatus = async (order, event) => {
     const newStatus = parseInt(event.target.value)
-    if (!confirm(`确认将订单 #${order.orderId} 状态改为 "${getStatusText(newStatus)}" 吗？`)) {
-        event.target.value = order.status
-        return
-    }
     try {
-        const res = await request.put(`/admin/orders/${order.orderId}/status`, null, { params: { status: newStatus } })
-        if (res.code === 200) loadOrders()
-        else { alert(res.message || '更新失败'); event.target.value = order.status }
-    } catch (e) { console.error(e); alert('更新失败'); event.target.value = order.status }
+        await ElMessageBox.confirm(`确认将订单 #${order.orderId} 状态改为 "${getStatusText(newStatus)}" 吗？`, '确认', { confirmButtonText: '确认', cancelButtonText: '取消' })
+    } catch { event.target.value = order.status; return }
+
+    const res = await request.put(`/admin/orders/${order.orderId}/status`, null, { params: { status: newStatus } })
+    if (res.code === 200) loadOrders()
+    else { ElMessage.error(res.message || '更新失败'); event.target.value = order.status }
 }
 
 const deleteOrder = async (order) => {
-    if (!confirm(`确认删除订单 #${order.orderId} 吗？此操作不可恢复。`)) return
     try {
-        const res = await request.delete(`/admin/orders/${order.orderId}`)
-        if (res.code === 200) loadOrders()
-        else alert(res.message || '删除失败')
-    } catch (e) { console.error(e); alert('删除失败') }
+        await ElMessageBox.confirm(`确认删除订单 #${order.orderId} 吗？此操作不可恢复。`, '确认', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
+    } catch { return }
+    const res = await request.delete(`/admin/orders/${order.orderId}`)
+    if (res.code === 200) { ElMessage.success('删除成功'); loadOrders() }
+    else ElMessage.error(res.message || '删除失败')
 }
 
 onMounted(loadOrders)

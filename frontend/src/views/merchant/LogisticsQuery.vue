@@ -227,7 +227,7 @@ const loadOrders = async () => {
         if (!user.id) return
         const res = await request.get('/orders/merchant', { params: { merchantId: user.id } })
         if (res.code === 200) orders.value = res.data || []
-    } catch (e) { console.error('获取订单失败:', e) }
+    } catch (e) { // error handled by GlobalExceptionHandler
     finally { loading.value = false }
 }
 
@@ -261,7 +261,7 @@ const loadOrderDetail = async (orderId) => {
             setTimeout(() => initEmptyMap(), 150)
         }
     } catch (e) {
-        console.error('查询物流失败:', e)
+        // error handled by GlobalExceptionHandler
         setTimeout(() => initEmptyMap(), 150)
     }
 }

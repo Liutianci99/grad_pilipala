@@ -88,7 +88,7 @@ const fetchMallProducts = async () => {
             }))
         }
     } catch (error) {
-        console.error('获取商城商品失败:', error)
+        // error handled by GlobalExceptionHandler
     }
 }
 
@@ -154,7 +154,7 @@ const placeOrder = async (product) => {
             await fetchMallProducts()
         }
     } catch (error) {
-        console.error('下单失败:', error)
+        // error handled by GlobalExceptionHandler
     }
 }
 

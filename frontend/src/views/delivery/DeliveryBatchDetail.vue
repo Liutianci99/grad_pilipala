@@ -120,7 +120,7 @@ const fetchWarehouseInfo = async (id) => {
     try {
         const res = await request.get(`/warehouse/${id}`)
         if (res.success && res.data) { warehouseInfo.value = res.data; return res.data }
-    } catch (e) { console.error('获取仓库信息失败:', e) }
+    } catch (e) { 
     return null
 }
 
@@ -155,11 +155,11 @@ const fetchBatchOrders = async () => {
                 return batch.orders
             }
         }
-        console.error('未找到批次数据, batchId:', batchId.value)
+        
         router.push('/driver/delivery-batch')
         return []
     } catch (e) {
-        console.error('获取批次订单失败:', e)
+        
         return []
     }
 }
@@ -256,7 +256,7 @@ const fetchRouteByBatch = async () => {
             }
             return true
         }
-    } catch (e) { console.log('暂无路线数据') }
+    } catch (e) { 
     return false
 }
 
@@ -277,7 +277,7 @@ const fetchLocationByBatch = async () => {
                 stopPolling()
             }
         }
-    } catch (e) { console.error('获取位置失败:', e) }
+    } catch (e) { 
 }
 
 const startPolling = () => {
@@ -333,7 +333,7 @@ onMounted(async () => {
             let n = 0
             const t = setInterval(() => { n++; if (window.TMap) { clearInterval(t); resolve() } else if (n >= 50) { clearInterval(t); reject() } }, 100)
         })
-    } catch { console.error('地图SDK加载失败'); return }
+    } catch { 
 
     // 3. Warehouse
     const whId = getCurrentUserWarehouseId()
