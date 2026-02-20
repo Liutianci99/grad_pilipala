@@ -1,11 +1,10 @@
 <template>
     <div class="page-container">
-        <h1>物流查询</h1>
-
-        <!-- No order selected: show order list -->
+        <!-- Order list view -->
         <div v-if="!selectedOrder">
+            <h1>物流查询</h1>
             <div class="filter-bar">
-                <div class="search-box" style="max-width:100%">
+                <div class="search-box">
                     <input
                         type="text"
                         v-model="searchKeyword"
@@ -16,8 +15,13 @@
                     <button @click="handleSearch" class="btn btn-ghost">搜索</button>
                 </div>
                 <div class="tabs">
-                    <button :class="['tab', { active: currentTab === 'transit' }]" @click="changeTab('transit')">运输中</button>
                     <button :class="['tab', { active: currentTab === 'all' }]" @click="changeTab('all')">全部</button>
+                    <button :class="['tab', { active: currentTab === 'unpaid' }]" @click="changeTab('unpaid')">未发货</button>
+                    <button :class="['tab', { active: currentTab === 'shipped' }]" @click="changeTab('shipped')">已发货</button>
+                    <button :class="['tab', { active: currentTab === 'picked' }]" @click="changeTab('picked')">已揽收</button>
+                    <button :class="['tab', { active: currentTab === 'transit' }]" @click="changeTab('transit')">运输中</button>
+                    <button :class="['tab', { active: currentTab === 'arrived' }]" @click="changeTab('arrived')">已到达</button>
+                    <button :class="['tab', { active: currentTab === 'received' }]" @click="changeTab('received')">已收货</button>
                 </div>
             </div>
 
@@ -46,18 +50,8 @@
             </div>
         </div>
 
-        <!-- Order selected: show tracking detail (like driver's 查看详情) -->
-        <div v-else class="detail-container">
-            <div class="detail-header">
-                <button class="btn btn-ghost btn-sm" @click="goBack">← 返回</button>
-                <div class="detail-header-info">
-                    <span class="order-id">#{{ selectedOrder.orderId }} · {{ selectedOrder.productName }}</span>
-                    <span class="badge" :class="getBatchStatusClass(trackingData.batchStatus)">
-                        {{ getBatchStatusText(trackingData.batchStatus) }}
-                    </span>
-                </div>
-            </div>
-
+        <!-- Tracking detail view -->
+        <div v-else class="detail-view">
             <!-- Map -->
             <div class="map-section">
                 <div id="tracking-map" class="map-container"></div>
@@ -90,9 +84,12 @@
                         </div>
                     </div>
                 </div>
+                <div v-if="!trackingData.batchStatus && trackingData.batchStatus !== 0" class="no-tracking">
+                    该订单暂无物流信息
+                </div>
             </div>
 
-            <!-- Delivery info -->
+            <!-- Info cards -->
             <div class="info-cards">
                 <div class="info-card" v-if="trackingData.warehouseName">
                     <div class="info-card-icon">🏭</div>
@@ -178,13 +175,17 @@
 
 <script setup>
 /* global TMap */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import request from '@/utils/request'
+
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const searchKeyword = ref('')
 const activeSearch = ref('')
-const currentTab = ref('transit')
+const currentTab = ref('all')
 const orders = ref([])
 const selectedOrder = ref(null)
 const trackingData = ref({})
@@ -195,11 +196,15 @@ let routePolyline = null
 let destMarker = null
 let pollingTimer = null
 
-// ── Filtered orders ──
+const statusMap = {
+    all: null, unpaid: 0, shipped: 1, picked: 2, transit: 3, arrived: 4, received: 5
+}
+
 const filteredOrders = computed(() => {
     let list = orders.value
-    if (currentTab.value === 'transit') {
-        list = list.filter(o => o.status >= 1 && o.status <= 3)
+    const statusVal = statusMap[currentTab.value]
+    if (statusVal !== null && statusVal !== undefined) {
+        list = list.filter(o => o.status === statusVal)
     }
     if (activeSearch.value) {
         const q = activeSearch.value.toLowerCase()
@@ -211,7 +216,6 @@ const filteredOrders = computed(() => {
     return list
 })
 
-// ── Load orders ──
 const loadOrders = async () => {
     loading.value = true
     try {
@@ -226,22 +230,32 @@ const loadOrders = async () => {
 const changeTab = (tab) => { currentTab.value = tab }
 const handleSearch = () => { activeSearch.value = searchKeyword.value }
 
-// ── View tracking ──
-const viewTracking = async (order) => {
+const viewTracking = (order) => {
+    router.push(`/consumer/logistics-query/${order.orderId}`)
+}
+
+const loadOrderDetail = async (orderId) => {
+    // Find from loaded orders or fetch
+    let order = orders.value.find(o => String(o.orderId) === String(orderId))
+    if (!order) {
+        // Load orders first
+        await loadOrders()
+        order = orders.value.find(o => String(o.orderId) === String(orderId))
+    }
+    if (!order) return
+
     selectedOrder.value = order
     trackingData.value = {}
 
     try {
-        const res = await request.get('/delivery-batch/track-by-order', { params: { orderId: order.orderId } })
+        const res = await request.get('/delivery-batch/track-by-order', { params: { orderId } })
         if (res.code === 200 && res.data) {
             trackingData.value = res.data
-            // Wait for DOM then init map
             setTimeout(async () => {
                 await initMap(res.data, order)
-                if (res.data.batchStatus === 1) startPolling(order.orderId)
+                if (res.data.batchStatus === 1) startPolling(orderId)
             }, 150)
         } else {
-            // No tracking data yet — show empty map
             setTimeout(() => initEmptyMap(), 150)
         }
     } catch (e) {
@@ -250,13 +264,18 @@ const viewTracking = async (order) => {
     }
 }
 
-const goBack = () => {
-    selectedOrder.value = null
-    trackingData.value = {}
-    stopPolling()
-    if (map) { map.destroy(); map = null }
-    truckMarker = null; routePolyline = null; destMarker = null
-}
+// Watch route changes for breadcrumb navigation
+watch(() => route.params.orderId, (newId) => {
+    if (newId) {
+        loadOrderDetail(newId)
+    } else {
+        selectedOrder.value = null
+        trackingData.value = {}
+        stopPolling()
+        if (map) { map.destroy(); map = null }
+        truckMarker = null; routePolyline = null; destMarker = null
+    }
+}, { immediate: false })
 
 // ── Map ──
 const waitForTMap = () => new Promise((resolve, reject) => {
@@ -283,7 +302,6 @@ const initMap = async (data, order) => {
 
     map = new TMap.Map(el, { zoom: 10, center })
 
-    // Route polyline
     if (data.polyline) {
         const coors = [...data.polyline]
         for (let i = 2; i < coors.length; i++) coors[i] = coors[i - 2] + coors[i] / 1000000
@@ -300,7 +318,6 @@ const initMap = async (data, order) => {
         }
     }
 
-    // Destination marker (customer's address)
     if (order.address?.latitude && order.address?.longitude) {
         destMarker = new TMap.MultiMarker({
             map,
@@ -316,7 +333,6 @@ const initMap = async (data, order) => {
         })
     }
 
-    // Truck marker
     if (data.currentLat) {
         truckMarker = new TMap.MultiMarker({
             map,
@@ -341,7 +357,6 @@ const initEmptyMap = async () => {
     map = new TMap.Map(el, { zoom: 5, center: new TMap.LatLng(35, 110) })
 }
 
-// ── Polling ──
 const startPolling = (orderId) => {
     stopPolling()
     pollingTimer = setInterval(async () => {
@@ -371,9 +386,6 @@ const getStatusClass = (s) => {
     if (s === 4) return 'badge-arrived'
     return 'badge-done'
 }
-const getBatchStatusText = (s) => ({ 0: '待出发', 1: '配送中', 2: '已完成' }[s] || '未知')
-const getBatchStatusClass = (s) => ({ 0: 'badge-default', 1: 'badge-transit', 2: 'badge-done' }[s] || '')
-
 const formatTime = (t) => {
     if (!t) return ''
     const d = new Date(t)
@@ -395,12 +407,17 @@ const formatRemainingTime = (min) => {
     return m >= 60 ? `${Math.floor(m / 60)}小时${m % 60 > 0 ? m % 60 + '分钟' : ''}` : `${m}分钟`
 }
 
-onMounted(() => loadOrders())
+onMounted(async () => {
+    await loadOrders()
+    // If URL has orderId, load detail directly
+    if (route.params.orderId) {
+        loadOrderDetail(route.params.orderId)
+    }
+})
 onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 </script>
 
 <style scoped>
-/* Order list */
 .order-list { display: flex; flex-direction: column; gap: 8px; }
 
 .order-card {
@@ -425,14 +442,11 @@ onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 .badge-done { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
 .empty-state { text-align: center; padding: 48px; color: #8899a6; font-size: 14px; }
+.no-tracking { text-align: center; padding: 24px; color: #8899a6; font-size: 14px; }
 
 /* Detail view */
-.detail-container { width: 100%; }
-.detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.detail-header-info { display: flex; align-items: center; gap: 10px; }
-.order-id { font-size: 14px; font-weight: 600; color: #0f1419; }
+.detail-view { width: 100%; }
 
-/* Map */
 .map-section { background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
 .map-container { width: 100%; height: 420px; border-radius: 8px; overflow: hidden; }
 .route-info { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eff3f4; }
@@ -446,7 +460,6 @@ onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 .progress-bar-inline { width: 80px; height: 4px; background: #eff3f4; border-radius: 2px; overflow: hidden; display: inline-block; }
 .progress-fill-inline { height: 100%; background: #0f1419; border-radius: 2px; transition: width 0.5s; display: block; }
 
-/* Info cards */
 .info-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .info-card {
     display: flex; gap: 12px; align-items: flex-start;
@@ -458,10 +471,7 @@ onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 .info-card-value { font-size: 14px; color: #0f1419; font-weight: 600; margin-top: 2px; }
 .info-card-sub { font-size: 12px; color: #536471; margin-top: 2px; }
 
-/* Timeline */
-.timeline-section {
-    background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 20px;
-}
+.timeline-section { background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 20px; }
 .timeline-section h3 { font-size: 15px; font-weight: 600; color: #0f1419; margin: 0 0 16px 0; }
 
 .timeline { position: relative; padding-left: 24px; }
@@ -469,10 +479,8 @@ onUnmounted(() => { stopPolling(); if (map) map.destroy() })
     content: ''; position: absolute; left: 7px; top: 4px; bottom: 4px;
     width: 2px; background: #eff3f4;
 }
-
 .timeline-item { position: relative; padding-bottom: 20px; }
 .timeline-item:last-child { padding-bottom: 0; }
-
 .timeline-dot {
     position: absolute; left: -24px; top: 2px;
     width: 16px; height: 16px; border-radius: 50%;

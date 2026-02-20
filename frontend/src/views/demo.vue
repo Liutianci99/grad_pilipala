@@ -168,6 +168,8 @@ const getBreadcrumb = () => {
     if (currentPath === '/merchant/product-listing') return [{ title: '库存管理', path: '/merchant/inventory-management' }, { title: '商品上架', path: null }]
     if (currentPath === '/merchant/stock-in') return [{ title: '库存管理', path: '/merchant/inventory-management' }, { title: '商品入库', path: null }]
     if (currentPath.startsWith('/driver/delivery-batch-detail')) return [{ title: '运输批次', path: '/driver/delivery-batch' }, { title: '批次详情', path: null }]
+    if (currentPath.match(/^\/consumer\/logistics-query\/\d+/)) return [{ title: '物流查询', path: '/consumer/logistics-query' }, { title: '物流详情', path: null }]
+    if (currentPath.match(/^\/merchant\/logistics-query\/\d+/)) return [{ title: '物流查询', path: '/merchant/logistics-query' }, { title: '物流详情', path: null }]
     const currentMenu = menuConfig.find(item => item.path === currentPath)
     return currentMenu ? [{ title: currentMenu.title, path: null }] : [{ title: '首页', path: null }]
 }

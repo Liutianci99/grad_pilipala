@@ -81,6 +81,10 @@ const router = createRouter({
           path: '/merchant/logistics-query',
           component: MerchantLogisticsQuery
         },
+        {
+          path: '/merchant/logistics-query/:orderId',
+          component: MerchantLogisticsQuery
+        },
         // General routes
         {
           path: '/general/mall',
@@ -93,6 +97,10 @@ const router = createRouter({
         },
         {
           path: '/consumer/logistics-query',
+          component: ConsumerLogisticsQuery
+        },
+        {
+          path: '/consumer/logistics-query/:orderId',
           component: ConsumerLogisticsQuery
         },
         {
