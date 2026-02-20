@@ -182,17 +182,17 @@ const fetchBatchOrders = async () => {
         // 如果没有路由状态数据，尝试通过API获取
         const batchId = route.params.batchId || route.query.batchId
         if (!batchId) {
-            console.error('缺少批次ID参数')
-            alert('缺少批次ID参数，无法加载批次详情')
-            throw new Error('缺少批次ID参数')
+            console.error('缺少批次ID参数，返回批次列表')
+            router.push('/driver/delivery-batch')
+            return []
         }
 
         // 调用API获取批次列表，然后找到对应的批次
         const deliveryPersonnelId = getCurrentDeliveryPersonnelId()
         if (!deliveryPersonnelId) {
             console.error('无法获取配送员ID')
-            alert('无法获取配送员信息，请重新登录')
-            throw new Error('无法获取配送员ID')
+            router.push('/')
+            return []
         }
 
         console.log('通过API获取批次数据，deliveryPersonnelId:', deliveryPersonnelId, 'batchId:', batchId)
@@ -211,23 +211,17 @@ const fetchBatchOrders = async () => {
                 return batch.orders
             } else {
                 console.error('未找到对应的批次，batchId:', batchId)
-                alert('未找到对应的批次（批次ID: ' + batchId + '），可能已被删除或您没有权限访问')
-                throw new Error('未找到对应的批次')
+                router.push('/driver/delivery-batch')
+                return []
             }
         } else {
             console.error('API返回错误:', response)
-            alert('获取批次数据失败: ' + (response.message || '未知错误'))
-            throw new Error('API返回错误')
+            router.push('/driver/delivery-batch')
+            return []
         }
     } catch (error) {
         console.error('获取批次订单失败:', error)
-        // 如果是我们主动抛出的错误，不需要再次alert
-        if (!error.message.includes('缺少批次ID') &&
-            !error.message.includes('无法获取配送员ID') &&
-            !error.message.includes('未找到对应的批次') &&
-            !error.message.includes('API返回错误')) {
-            alert('获取批次订单失败: ' + error.message)
-        }
+        return []
         throw error
     }
 }
@@ -667,7 +661,6 @@ onMounted(async () => {
         await waitForTMap()
     } catch (error) {
         console.error('腾讯地图SDK加载失败:', error)
-        alert('地图加载失败，请刷新页面重试')
         return
     }
 
@@ -675,7 +668,7 @@ onMounted(async () => {
     const warehouseId = getCurrentUserWarehouseId()
     if (!warehouseId) {
         console.error('无法获取仓库ID')
-        alert('无法获取仓库信息，请重新登录')
+        router.push('/')
         return
     }
     console.log('仓库ID:', warehouseId)
@@ -684,7 +677,6 @@ onMounted(async () => {
     const warehouse = await fetchWarehouseInfo(warehouseId)
     if (!warehouse) {
         console.error('获取仓库信息失败')
-        alert('获取仓库信息失败，请刷新页面重试')
         return
     }
     console.log('仓库信息:', warehouse)
@@ -695,13 +687,12 @@ onMounted(async () => {
         orderList = await fetchBatchOrders()
     } catch (error) {
         console.error('获取批次订单失败，停止页面加载')
-        // 错误已经在 fetchBatchOrders 中处理并显示给用户
         return
     }
 
     if (!orderList || orderList.length === 0) {
         console.warn('该批次没有订单')
-        alert('该批次没有订单数据')
+        router.push('/driver/delivery-batch')
         return
     }
     console.log('订单列表:', orderList)
