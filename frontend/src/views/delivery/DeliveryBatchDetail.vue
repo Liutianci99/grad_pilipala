@@ -120,7 +120,7 @@ const fetchWarehouseInfo = async (id) => {
     try {
         const res = await request.get(`/warehouse/${id}`)
         if (res.success && res.data) { warehouseInfo.value = res.data; return res.data }
-    } catch (e) { 
+    } catch (e) { /* handled */ }
     return null
 }
 
@@ -158,10 +158,7 @@ const fetchBatchOrders = async () => {
         
         router.push('/driver/delivery-batch')
         return []
-    } catch (e) {
-        
-        return []
-    }
+    } catch (e) { return [] }
 }
 
 // ── Map ──
@@ -256,7 +253,7 @@ const fetchRouteByBatch = async () => {
             }
             return true
         }
-    } catch (e) { 
+    } catch (e) { /* handled */ }
     return false
 }
 
@@ -277,7 +274,7 @@ const fetchLocationByBatch = async () => {
                 stopPolling()
             }
         }
-    } catch (e) { 
+    } catch (e) { /* handled */ }
 }
 
 const startPolling = () => {
@@ -333,7 +330,7 @@ onMounted(async () => {
             let n = 0
             const t = setInterval(() => { n++; if (window.TMap) { clearInterval(t); resolve() } else if (n >= 50) { clearInterval(t); reject() } }, 100)
         })
-    } catch { 
+    } catch { return }
 
     // 3. Warehouse
     const whId = getCurrentUserWarehouseId()

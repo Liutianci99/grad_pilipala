@@ -227,8 +227,7 @@ const loadOrders = async () => {
         if (!user.id) return
         const res = await request.get('/orders/merchant', { params: { merchantId: user.id } })
         if (res.code === 200) orders.value = res.data || []
-    } catch (e) { // error handled by GlobalExceptionHandler
-    finally { loading.value = false }
+    } catch (e) { /* handled */ } finally { loading.value = false }
 }
 
 const changeTab = (tab) => { currentTab.value = tab }
