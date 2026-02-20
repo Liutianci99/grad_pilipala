@@ -1,121 +1,110 @@
-# 🚚 电商物流管理系统 (E-commerce Logistics Management System)
+# 电商物流管理系统
 
-> Built by Boss, improved by Pilipala 🦞🎆
-
-基于 Spring Boot 3.2 + Vue 3 + MySQL 的全栈电商物流管理系统，支持多角色物流全流程管理。
+Spring Boot 3.2 + Vue 3 + MySQL 全栈物流管理系统，支持管理员、商户、消费者、配送员四种角色。
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| **后端** | Spring Boot 3.2 · MyBatis Plus 3.5.5 · MySQL 8.0 · JWT |
-| **前端** | Vue 3 · Vite 5 · Element Plus · Pinia |
-| **部署** | Docker · Docker Compose · GitHub Actions CI/CD |
-| **文档** | Springdoc OpenAPI 2.0.2 · ReDoc |
+| 层 | 技术 |
+|---|------|
+| 后端 | Spring Boot 3.2 · MyBatis-Plus · JWT · MySQL 8.0 |
+| 前端 | Vue 3 · Vite · Element Plus · Lucide Icons |
+| 部署 | Docker Compose · GitHub Actions → GHCR |
+| 地图 | 腾讯地图 JavaScript API |
 
-## 核心功能
+## 功能概览
 
-### 🏪 商户端
-- 商品入库 / 上架 / 下架管理
-- 库存查询与管理
-- 订单管理与物流查询
+### 管理员
+- 用户管理（CRUD、角色筛选、搜索）
+- 订单管理（状态修改、搜索、删除）
+- 数据分析（概览卡片、角色分布、订单趋势图）
 
-### 🛒 消费者端
-- 商城浏览与在线购物
-- 收货地址管理
-- 订单跟踪与物流查询
+### 商户
+- 商城浏览、商品上架/下架/入库
+- 库存管理（搜索、编辑、删除）
+- 订单管理（确认、发货）
+- 物流查询（地图路线、时间线、实时追踪）
 
-### 🚗 配送员端
-- 待取件 / 待配送任务
-- 批量配送管理
-- 配送路线规划（腾讯地图）
-- 历史任务查看
+### 消费者
+- 商城购物（选商品、选地址、下单）
+- 我的订单（状态筛选、搜索）
+- 地址管理（CRUD、默认地址）
+- 物流查询
 
-### 👨‍💼 管理员端
-- 用户管理
-- 全平台订单管理
-- 数据分析与统计
+### 配送员
+- 待揽收 / 待送货
+- 创建配送批次（多单合并）
+- 批次详情与完成配送
+- 历史任务
 
 ## 快速启动
 
-### Docker 部署（推荐）
-
 ```bash
-# 1. 克隆项目
 git clone https://github.com/Liutianci99/grad_pilipala.git
 cd grad_pilipala
 
-# 2. 配置环境变量
 cp .env.example .env
-# 编辑 .env 填入你的配置
+# 编辑 .env 填入数据库密码、JWT密钥等
 
-# 3. 启动
 docker compose up -d
-
-# 前端: http://localhost:80
-# 后端: http://localhost:8080
-# API文档: http://localhost:8080/api/redoc.html
 ```
 
-### 本地开发
+| 服务 | 地址 |
+|------|------|
+| 前端 | http://localhost:8888 |
+| 后端 | http://localhost:8080 |
+| MySQL | localhost:3308 |
 
-```bash
-# 后端
-cd backend
-mvn spring-boot:run
-
-# 前端
-cd frontend
-pnpm install && pnpm dev
-```
+默认账号：任意用户名 / 密码 `123`，登录时选择角色。
 
 ## 项目结构
 
 ```
 grad_pilipala/
-├── .github/workflows/    # CI/CD 流水线
-├── backend/              # Spring Boot 后端
-│   ├── src/main/java/com/logistics/
-│   │   ├── config/       # 配置（CORS、JWT、OpenAPI）
-│   │   ├── controller/   # REST API 控制器
-│   │   ├── dto/          # 数据传输对象
-│   │   ├── entity/       # 数据库实体
-│   │   ├── mapper/       # MyBatis 数据访问层
-│   │   ├── service/      # 业务逻辑层
-│   │   └── util/         # 工具类（JWT等）
-│   └── Dockerfile
-├── frontend/             # Vue 3 前端
-│   ├── src/
-│   │   ├── views/        # 页面组件（按角色分目录）
-│   │   ├── router/       # 路由配置
-│   │   └── utils/        # 工具函数
-│   └── Dockerfile
-├── database/
-│   └── init.sql          # 数据库初始化脚本
-├── docker-compose.yml    # Docker 编排
-└── .env.example          # 环境变量模板
+├── .github/workflows/ci-cd.yml   # CI/CD（push main → GHCR → 服务器部署）
+├── backend/
+│   └── src/main/java/com/logistics/
+│       ├── controller/            # 8 个 REST 控制器
+│       ├── entity/                # 数据库实体
+│       ├── mapper/                # MyBatis 数据访问
+│       ├── service/               # 业务逻辑
+│       ├── config/                # CORS、JWT、OpenAPI
+│       └── util/                  # JWT 工具类
+├── frontend/
+│   └── src/
+│       ├── views/                 # 页面（按角色分目录）
+│       │   ├── admin/             # 用户管理、订单管理、数据分析
+│       │   ├── merchant/          # 库存、订单、上架/下架/入库、物流
+│       │   ├── consumer/          # 我的订单、地址、物流
+│       │   ├── delivery/          # 揽收、配送、批次、历史
+│       │   └── general/           # 商城
+│       ├── assets/design.css      # 全局设计系统
+│       ├── router/                # 路由配置
+│       └── utils/request.js       # Axios 封装 + JWT 拦截
+├── database/init.sql              # 建表 + 假数据
+├── specs/                         # 项目规范
+│   ├── constitution.md            # 项目宪法
+│   ├── requirements.md            # 功能需求（按角色划分）
+│   ├── rule.md                    # 编码规范
+│   ├── api.md                     # 后端接口规范
+│   └── frontend_design.md         # 前端设计规范
+├── docker-compose.yml
+└── .env.example
 ```
 
 ## CI/CD
 
 推送到 `main` 分支自动触发：
-1. ✅ 后端编译检查
-2. ✅ 前端构建检查
-3. 🚀 自动部署到服务器
+1. 构建后端/前端 Docker 镜像
+2. 推送到 GitHub Container Registry (GHCR)
+3. SSH 到服务器拉取新镜像并重启
 
-## 默认账号
+## 开发规范
 
-| 角色 | 用户名 | 密码 |
-|------|--------|------|
-| 管理员 | admin | 登录后修改 |
-| 商户 | merchant | 登录后修改 |
-| 配送员 | driver | 登录后修改 |
-| 消费者 | consumer | 登录后修改 |
+详见 `specs/` 目录。新功能开发流程：
+1. 更新 `specs/requirements.md`
+2. 按 `rule.md` + `api.md` + `frontend_design.md` 编码
+3. 功能分支 `feat/xxx` → PR → 合并到 `main`
 
 ## License
 
 MIT
-
----
-
-*🦞 Lobster on the outside, fireworks on the inside 🎆*
