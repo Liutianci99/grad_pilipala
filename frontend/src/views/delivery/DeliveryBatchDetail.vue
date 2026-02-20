@@ -78,6 +78,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '@/utils/request'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -287,21 +288,23 @@ const stopPolling = () => { if (pollingTimer) { clearInterval(pollingTimer); pol
 
 // ── Complete batch ──
 const handleCompleteBatch = async () => {
-    if (!confirm(`确定完成该批次的配送吗？\n\n包含 ${orders.value.length} 个订单`)) return
+    try {
+        await ElMessageBox.confirm(
+            `确定完成该批次的配送吗？包含 ${orders.value.length} 个订单`,
+            '确认', { confirmButtonText: '确认送达', cancelButtonText: '取消' }
+        )
+    } catch { return }
     completing.value = true
     try {
         const res = await request.post(`/delivery-batch/complete-batch?batchId=${batchId.value}`)
         if (res.code === 200) {
             batchStatus.value = 2
             stopPolling()
-            alert('配送完成！')
+            ElMessage.success('配送完成！')
             router.push('/driver/delivery-batch')
         } else {
-            alert(res.message || '操作失败')
+            ElMessage.error(res.message || '操作失败')
         }
-    } catch (e) {
-        console.error('完成配送失败:', e)
-        alert('完成配送失败')
     } finally { completing.value = false }
 }
 
