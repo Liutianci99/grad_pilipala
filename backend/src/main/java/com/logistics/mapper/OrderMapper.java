@@ -90,4 +90,26 @@ public interface OrderMapper extends BaseMapper<Order> {
             "LEFT JOIN users u ON o.customer_id = u.id " +
             "WHERE o.order_id = #{orderId}")
     Order selectOrderWithDetails(@Param("orderId") Integer orderId);
+
+    /**
+     * 管理员查询所有订单（含顾客名、商户名、仓库名）
+     */
+    @Select("<script>" +
+            "SELECT o.*, u.username AS customerName, w.name AS warehouseName " +
+            "FROM orders o " +
+            "LEFT JOIN users u ON o.customer_id = u.id " +
+            "LEFT JOIN warehouse w ON o.warehouse_id = w.id " +
+            "WHERE 1=1 " +
+            "<if test='status != null'>" +
+            "  AND o.status = #{status} " +
+            "</if>" +
+            "<if test='search != null and search != \"\"'>" +
+            "  AND (o.product_name LIKE CONCAT('%', #{search}, '%') " +
+            "       OR u.username LIKE CONCAT('%', #{search}, '%') " +
+            "       OR CAST(o.order_id AS CHAR) LIKE CONCAT('%', #{search}, '%')) " +
+            "</if>" +
+            "ORDER BY o.order_time DESC" +
+            "</script>")
+    List<Order> selectAllOrdersForAdmin(@Param("status") Integer status,
+                                        @Param("search") String search);
 }
