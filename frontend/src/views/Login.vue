@@ -38,12 +38,10 @@
                     />
                 </div>
 
-                <div class="btn-row">
-                    <button type="submit" class="sign-in-btn" :disabled="loading">
-                        {{ loading ? '登录中...' : '登录' }}
-                    </button>
-                    <button type="button" class="sign-in-btn ghost" @click="$router.push('/register')">注册</button>
-                </div>
+                <button type="submit" class="sign-in-btn" :disabled="loading">
+                    {{ loading ? '登录中...' : '登录' }}
+                </button>
+                <button type="button" class="sign-in-btn ghost" @click="$router.push('/register')">注册</button>
             </form>
         </div>
     </div>
@@ -185,7 +183,6 @@ const handleLogin = async () => {
 }
 
 .sign-in-btn {
-    flex: 1;
     width: 100%;
     height: 40px;
     background: #0a0a0a;
@@ -205,12 +202,6 @@ const handleLogin = async () => {
 .sign-in-btn:disabled {
     cursor: not-allowed;
     opacity: 0.5;
-}
-
-.btn-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
 }
 
 .sign-in-btn.ghost {

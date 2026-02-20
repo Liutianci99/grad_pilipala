@@ -32,12 +32,9 @@
                     <input v-model="form.confirmPassword" type="password" class="form-input" placeholder="请再次输入密码" />
                 </div>
 
-                <div class="btn-row">
-                    <button type="button" class="sign-in-btn ghost" @click="$router.push('/')">登录</button>
-                    <button type="submit" class="sign-in-btn" :disabled="loading">
-                        {{ loading ? '注册中...' : '注册' }}
-                    </button>
-                </div>
+                <button type="submit" class="sign-in-btn" :disabled="loading">
+                    {{ loading ? '注册中...' : '注册' }}
+                </button>
             </form>
         </div>
     </div>
@@ -78,21 +75,8 @@ const handleRegister = async () => {
             return
         }
 
-        ElMessage.success('注册成功')
-        if (data.data) {
-            const userInfo = {
-                id: data.data.id,
-                username: data.data.username,
-                role: data.data.role,
-                token: data.data.token,
-                warehouseId: data.data.warehouseId,
-                warehouseName: data.data.warehouseName
-            }
-            sessionStorage.setItem('userInfo', JSON.stringify(userInfo))
-            sessionStorage.setItem('token', data.data.token)
-            sessionStorage.setItem('isLoggedIn', 'true')
-            await router.push('/demo')
-        }
+        ElMessage.success('注册成功，请登录')
+        await router.push('/')
     } catch (e) { /* handled */ } finally {
         loading.value = false
     }
@@ -177,15 +161,10 @@ const handleRegister = async () => {
 
 .form-input::placeholder { color: #a3a3a3; }
 
-.btn-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
-}
-
 .sign-in-btn {
-    flex: 1;
+    width: 100%;
     height: 40px;
+    margin-top: 8px;
     background: #0a0a0a;
     color: #ffffff;
     border: none;
@@ -198,11 +177,4 @@ const handleRegister = async () => {
 
 .sign-in-btn:hover:not(:disabled) { background: #262626; }
 .sign-in-btn:disabled { cursor: not-allowed; opacity: 0.5; }
-
-.sign-in-btn.ghost {
-    background: #ffffff;
-    color: #0a0a0a;
-    border: 1px solid #e5e5e5;
-}
-.sign-in-btn.ghost:hover { background: #f5f5f5; }
 </style>
