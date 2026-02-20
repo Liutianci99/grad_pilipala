@@ -354,9 +354,9 @@ const toggleSidebar = () => { isCollapsed.value = !isCollapsed.value }
 }
 
 .top-header {
-    height: 52px;
+    height: 44px;
     background: #ffffff;
-    border-bottom: 1px solid #e5e5e5;
+    border-bottom: 1px solid #eff3f4;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -364,13 +364,13 @@ const toggleSidebar = () => { isCollapsed.value = !isCollapsed.value }
     flex-shrink: 0;
 }
 
-.header-left { display: flex; align-items: center; gap: 12px; }
+.header-left { display: flex; align-items: center; gap: 10px; }
 
 .toggle-btn {
     padding: 6px;
     background: transparent;
     border: none;
-    color: #737373;
+    color: #8899a6;
     border-radius: 6px;
     cursor: pointer;
     display: flex;
@@ -378,32 +378,33 @@ const toggleSidebar = () => { isCollapsed.value = !isCollapsed.value }
     justify-content: center;
     transition: all 0.15s;
 }
-.toggle-btn:hover { background: #f5f5f5; color: #0a0a0a; }
+.toggle-btn:hover { background: #f7f9f9; color: #0f1419; }
 
-.breadcrumb { display: flex; align-items: center; gap: 6px; }
+.breadcrumb { display: flex; align-items: center; gap: 4px; }
 .breadcrumb-link {
-    font-size: 13px;
-    color: #737373;
+    font-size: 12px;
+    color: #8899a6;
     cursor: pointer;
     transition: color 0.15s;
+    text-decoration: none;
 }
-.breadcrumb-link:hover { color: #0a0a0a; }
-.breadcrumb-current { font-size: 13px; color: #0a0a0a; font-weight: 500; }
-.breadcrumb-separator { font-size: 13px; color: #d4d4d4; margin: 0 2px; }
+.breadcrumb-link:hover { color: #0f1419; }
+.breadcrumb-current { font-size: 12px; color: #536471; font-weight: 500; }
+.breadcrumb-separator { font-size: 11px; color: #cfd9de; margin: 0 1px; }
 
 .header-right { display: flex; align-items: center; gap: 12px; }
-.user-info { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #737373; }
+.user-info { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #536471; }
 .user-badge {
     padding: 2px 8px;
-    background: #f5f5f5;
-    border: 1px solid #e5e5e5;
+    background: #f7f9f9;
+    border: 1px solid #eff3f4;
     border-radius: 4px;
     font-size: 11px;
     font-weight: 500;
-    color: #525252;
+    color: #536471;
 }
-.user-name { color: #0a0a0a; font-weight: 500; }
-.warehouse-info { color: #a3a3a3; }
+.user-name { color: #0f1419; font-weight: 500; }
+.warehouse-info { color: #8899a6; }
 
 .content-area {
     flex: 1;
