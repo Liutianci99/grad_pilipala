@@ -23,6 +23,12 @@ public class AuthController {
         return userService.login(req);
     }
 
+    @Operation(summary = "用户注册")
+    @PostMapping("/register")
+    public LoginResponse register(@RequestBody LoginRequest req) {
+        return userService.register(req);
+    }
+
     @Operation(summary = "健康检查")
     @GetMapping("/test")
     public String test() {

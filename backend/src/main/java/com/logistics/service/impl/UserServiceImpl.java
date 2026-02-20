@@ -25,6 +25,33 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
+    public LoginResponse register(LoginRequest req) {
+        // 不允许注册管理员
+        if ("admin".equals(req.getRole())) {
+            return new LoginResponse(false, "不允许注册管理员账号", null);
+        }
+        // 检查用户名+角色是否已存在
+        Long count = userMapper.selectCount(new LambdaQueryWrapper<User>()
+            .eq(User::getUsername, req.getUsername())
+            .eq(User::getRole, req.getRole()));
+        if (count > 0) {
+            return new LoginResponse(false, "该用户名已被注册", null);
+        }
+        // 创建用户
+        User user = new User();
+        user.setUsername(req.getUsername());
+        user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setRole(req.getRole());
+        userMapper.insert(user);
+        // 自动登录，返回 token
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
+        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
+            user.getId(), user.getUsername(), user.getRole(), token, null, null
+        );
+        return new LoginResponse(true, "注册成功", userInfo);
+    }
+
+    @Override
     public LoginResponse login(LoginRequest req) {
         log.debug("登录请求: username={}, role={}", req.getUsername(), req.getRole());
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()

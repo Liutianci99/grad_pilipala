@@ -3,46 +3,40 @@
         <div class="login-box">
             <div class="login-header">
                 <h1 class="brand">物流管理</h1>
-                <p class="subtitle">电商物流管理系统</p>
+                <p class="subtitle">创建新账号</p>
             </div>
 
-            <form class="login-form" @submit.prevent="handleLogin">
+            <form class="login-form" @submit.prevent="handleRegister">
                 <div class="form-group">
                     <label class="form-label">身份</label>
-                    <select v-model="loginForm.role" class="form-select">
+                    <select v-model="form.role" class="form-select">
                         <option value="">请选择身份</option>
                         <option value="merchant">商家</option>
                         <option value="consumer">顾客</option>
                         <option value="driver">配送员</option>
-                        <option value="admin">管理员</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">用户名</label>
-                    <input
-                        v-model="loginForm.username"
-                        type="text"
-                        class="form-input"
-                        placeholder="请输入用户名"
-                    />
+                    <input v-model="form.username" type="text" class="form-input" placeholder="请输入用户名" />
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">密码</label>
-                    <input
-                        v-model="loginForm.password"
-                        :type="showPassword ? 'text' : 'password'"
-                        class="form-input"
-                        placeholder="请输入密码"
-                    />
+                    <input v-model="form.password" type="password" class="form-input" placeholder="请输入密码" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">确认密码</label>
+                    <input v-model="form.confirmPassword" type="password" class="form-input" placeholder="请再次输入密码" />
                 </div>
 
                 <div class="btn-row">
+                    <button type="button" class="sign-in-btn ghost" @click="$router.push('/')">登录</button>
                     <button type="submit" class="sign-in-btn" :disabled="loading">
-                        {{ loading ? '登录中...' : '登录' }}
+                        {{ loading ? '注册中...' : '注册' }}
                     </button>
-                    <button type="button" class="sign-in-btn ghost" @click="$router.push('/register')">注册</button>
                 </div>
             </form>
         </div>
@@ -53,34 +47,38 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '@/utils/request'
+import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
-const showPassword = ref(false)
 const router = useRouter()
 
-const loginForm = reactive({
+const form = reactive({
     role: '',
     username: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
 })
 
-const handleLogin = async () => {
-    if (!loginForm.role) return
-    if (!loginForm.username || !loginForm.password) return
+const handleRegister = async () => {
+    if (!form.role) return ElMessage.warning('请选择身份')
+    if (!form.username) return ElMessage.warning('请输入用户名')
+    if (!form.password) return ElMessage.warning('请输入密码')
+    if (form.password !== form.confirmPassword) return ElMessage.warning('两次密码不一致')
 
     loading.value = true
     try {
-        const data = await request.post('/auth/login', {
-            username: loginForm.username,
-            password: loginForm.password,
-            role: loginForm.role
+        const data = await request.post('/auth/register', {
+            username: form.username,
+            password: form.password,
+            role: form.role
         })
 
         if (!data.success) {
-            loading.value = false
+            ElMessage.error(data.message || '注册失败')
             return
         }
 
+        ElMessage.success('注册成功')
         if (data.data) {
             const userInfo = {
                 id: data.data.id,
@@ -95,9 +93,7 @@ const handleLogin = async () => {
             sessionStorage.setItem('isLoggedIn', 'true')
             await router.push('/demo')
         }
-    } catch (e) {
-        loading.value = false
-    } finally {
+    } catch (e) { /* handled */ } finally {
         loading.value = false
     }
 }
@@ -179,14 +175,16 @@ const handleLogin = async () => {
     border-color: #0a0a0a;
 }
 
-.form-input::placeholder,
-.form-select::placeholder {
-    color: #a3a3a3;
+.form-input::placeholder { color: #a3a3a3; }
+
+.btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
 }
 
 .sign-in-btn {
     flex: 1;
-    width: 100%;
     height: 40px;
     background: #0a0a0a;
     color: #ffffff;
@@ -198,20 +196,8 @@ const handleLogin = async () => {
     transition: background 0.15s;
 }
 
-.sign-in-btn:hover:not(:disabled) {
-    background: #262626;
-}
-
-.sign-in-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-
-.btn-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
-}
+.sign-in-btn:hover:not(:disabled) { background: #262626; }
+.sign-in-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
 .sign-in-btn.ghost {
     background: #ffffff;

@@ -1,6 +1,24 @@
 # 任务清单
 
-## 代码重构 — 匹配 specs 规范
+## 用户注册功能
+
+### 后端
+
+- [ ] T020 [P] UserService: 添加 register 方法（校验用户名重复、BCrypt 加密、自动登录返回 token）
+- [ ] T021 [P] AuthController: 添加 POST /auth/register 端点
+- [ ] T022 [P] WebMvcConfig: JWT 拦截器排除 /auth/register
+
+### 前端
+
+- [ ] T023 [P] Register.vue: 新建注册页面（用户名、密码、确认密码、角色选择，不含管理员）
+- [ ] T024 [P] Login.vue: 添加"注册"按钮（与登录按钮并排，跳转 /register）
+- [ ] T025 [P] router: 添加 /register 路由
+- [ ] T026 前端 build 验证
+- [ ] T027 提交并推送到 main
+
+---
+
+## 代码重构 — 匹配 specs 规范（已完成 ✅）
 
 ### 后端
 

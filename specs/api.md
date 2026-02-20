@@ -27,6 +27,7 @@
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/auth/login` | 登录（username + password + role → token） |
+| POST | `/auth/register` | 注册（username + password + role → token，自动登录） |
 
 ### 管理员 `/admin`
 | 方法 | 路径 | 说明 |

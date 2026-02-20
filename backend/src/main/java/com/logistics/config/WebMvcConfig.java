@@ -19,6 +19,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 // 排除不需要验证的路径
                 .excludePathPatterns(
                     "/auth/login",
+                    "/auth/register",
                     "/auth/test",
                     "/error",
                     // API 文档相关路径

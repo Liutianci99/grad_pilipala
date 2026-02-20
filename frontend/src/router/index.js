@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
 import Demo from '../views/demo.vue'
 
 // Admin
@@ -35,6 +36,12 @@ const router = createRouter({
       path: '/',
       name: 'login',
       component: Login,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: Register,
       meta: { requiresAuth: false }
     },
     {
@@ -141,8 +148,8 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth !== false && !isLoggedIn) {
     // 需要登录但未登录，跳转到登录页
     next({ name: 'login' })
-  } else if (to.name === 'login' && isLoggedIn) {
-    // 已登录访问登录页，跳转到主页
+  } else if ((to.name === 'login' || to.name === 'register') && isLoggedIn) {
+    // 已登录访问登录/注册页，跳转到主页
     next({ name: 'home' })
   } else {
     next()

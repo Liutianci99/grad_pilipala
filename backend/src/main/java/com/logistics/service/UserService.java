@@ -5,4 +5,5 @@ import com.logistics.dto.LoginResponse;
 
 public interface UserService {
     LoginResponse login(LoginRequest req);
+    LoginResponse register(LoginRequest req);
 }
