@@ -3,22 +3,41 @@
         <!-- 侧边栏 -->
         <aside class="sidebar" :class="{ collapsed: isCollapsed }">
             <div class="logo">
-                <h2 v-if="!isCollapsed">物流管理</h2>
-                <Package v-else :size="20" :stroke-width="1.5" class="logo-icon" />
+                <div class="logo-mark" v-if="!isCollapsed">
+                    <Boxes :size="22" :stroke-width="1.5" />
+                </div>
+                <Boxes v-else :size="22" :stroke-width="1.5" class="logo-icon" />
+                <div class="logo-text" v-if="!isCollapsed">
+                    <h2>物流管理</h2>
+                    <span class="logo-sub">E-commerce Logistics</span>
+                </div>
             </div>
             <nav class="nav-menu">
+                <div class="nav-section" v-if="!isCollapsed">
+                    <span class="nav-label">{{ getRoleLabel(currentUser.role) }}</span>
+                </div>
                 <ul>
                     <li v-for="item in visibleMenu" :key="item.path">
                         <a href="#" @click.prevent="selectMenu(item)" :class="{ active: activeMenu === item.path }">
-                            <component :is="item.icon" :size="18" :stroke-width="1.5" class="icon" />
-                            <span class="title" v-if="!isCollapsed">{{ item.title }}</span>
+                            <component :is="item.icon" :size="22" :stroke-width="1.5" class="icon" />
+                            <div class="nav-text" v-if="!isCollapsed">
+                                <span class="title">{{ item.title }}</span>
+                                <span class="subtitle">{{ item.desc }}</span>
+                            </div>
                         </a>
                     </li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
+                <div class="user-card" v-if="!isCollapsed">
+                    <div class="user-avatar">{{ getUserName().charAt(0) }}</div>
+                    <div class="user-detail">
+                        <span class="user-card-name">{{ getUserName() }}</span>
+                        <span class="user-card-role">{{ getRoleLabel(currentUser.role) }}</span>
+                    </div>
+                </div>
                 <a href="#" @click.prevent="logout" class="logout-link">
-                    <LogOut :size="18" :stroke-width="1.5" class="icon" />
+                    <LogOut :size="20" :stroke-width="1.5" class="icon" />
                     <span class="title" v-if="!isCollapsed">退出登录</span>
                 </a>
             </div>
@@ -69,7 +88,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Home, Store, Truck, ShoppingBag, Shield, Settings, PanelLeft, PanelLeftClose, Package, LogOut, BarChart3, Users, MapPin, ClipboardList, History, PackageSearch } from 'lucide-vue-next'
+import { Home, Store, Truck, ShoppingBag, Shield, Settings, PanelLeft, PanelLeftClose, Package, LogOut, BarChart3, Users, MapPin, ClipboardList, History, PackageSearch, Boxes, Warehouse, ScanLine, PackageCheck, Route, ShoppingCart, MapPinned, Navigation } from 'lucide-vue-next'
 
 const router = useRouter()
 
@@ -103,21 +122,21 @@ onMounted(() => {
 })
 
 const menuConfig = [
-    { title: '用户管理', path: '/admin/user-management', icon: Users, roles: ['admin'] },
-    { title: '订单管理', path: '/admin/order-management', icon: ClipboardList, roles: ['admin'] },
-    { title: '数据分析', path: '/admin/data-analysis', icon: BarChart3, roles: ['admin'] },
-    { title: '商城', path: '/general/mall', icon: Store, roles: ['merchant'] },
-    { title: '库存管理', path: '/merchant/inventory-management', icon: PackageSearch, roles: ['merchant'] },
-    { title: '订单管理', path: '/merchant/order-management', icon: ClipboardList, roles: ['merchant'] },
-    { title: '物流查询', path: '/merchant/logistics-query', icon: Truck, roles: ['merchant'] },
-    { title: '商城', path: '/general/mall', icon: Store, roles: ['consumer'] },
-    { title: '我的订单', path: '/consumer/my-orders', icon: ShoppingBag, roles: ['consumer'] },
-    { title: '地址管理', path: '/consumer/address-management', icon: MapPin, roles: ['consumer'] },
-    { title: '物流查询', path: '/consumer/logistics-query', icon: Truck, roles: ['consumer'] },
-    { title: '待揽收', path: '/driver/pending-pickup', icon: PackageSearch, roles: ['driver'] },
-    { title: '待送货', path: '/driver/pending-delivery', icon: Truck, roles: ['driver'] },
-    { title: '运输批次', path: '/driver/delivery-batch', icon: ClipboardList, roles: ['driver'] },
-    { title: '历史任务', path: '/driver/history-tasks', icon: History, roles: ['driver'] }
+    { title: '用户管理', desc: '管理系统用户', path: '/admin/user-management', icon: Users, roles: ['admin'] },
+    { title: '订单管理', desc: '查看所有订单', path: '/admin/order-management', icon: ClipboardList, roles: ['admin'] },
+    { title: '数据分析', desc: '统计与报表', path: '/admin/data-analysis', icon: BarChart3, roles: ['admin'] },
+    { title: '商城', desc: '浏览全部商品', path: '/general/mall', icon: ShoppingCart, roles: ['merchant'] },
+    { title: '库存管理', desc: '商品与库存', path: '/merchant/inventory-management', icon: Warehouse, roles: ['merchant'] },
+    { title: '订单管理', desc: '处理商户订单', path: '/merchant/order-management', icon: ClipboardList, roles: ['merchant'] },
+    { title: '物流查询', desc: '追踪物流状态', path: '/merchant/logistics-query', icon: Navigation, roles: ['merchant'] },
+    { title: '商城', desc: '浏览全部商品', path: '/general/mall', icon: ShoppingCart, roles: ['consumer'] },
+    { title: '我的订单', desc: '查看购买记录', path: '/consumer/my-orders', icon: ShoppingBag, roles: ['consumer'] },
+    { title: '地址管理', desc: '收货地址设置', path: '/consumer/address-management', icon: MapPinned, roles: ['consumer'] },
+    { title: '物流查询', desc: '追踪包裹位置', path: '/consumer/logistics-query', icon: Navigation, roles: ['consumer'] },
+    { title: '待揽收', desc: '等待揽收的包裹', path: '/driver/pending-pickup', icon: ScanLine, roles: ['driver'] },
+    { title: '待送货', desc: '准备配送的订单', path: '/driver/pending-delivery', icon: PackageCheck, roles: ['driver'] },
+    { title: '运输批次', desc: '批次路线管理', path: '/driver/delivery-batch', icon: Route, roles: ['driver'] },
+    { title: '历史任务', desc: '已完成的配送', path: '/driver/history-tasks', icon: History, roles: ['driver'] }
 ]
 
 const visibleMenu = computed(() => {
@@ -165,7 +184,7 @@ const toggleSidebar = () => { isCollapsed.value = !isCollapsed.value }
 
 /* ── Sidebar (X.com style — light, clean) ── */
 .sidebar {
-    width: 240px;
+    width: 260px;
     background: #ffffff;
     color: #0f1419;
     display: flex;
@@ -173,78 +192,154 @@ const toggleSidebar = () => { isCollapsed.value = !isCollapsed.value }
     transition: width 0.2s ease;
     border-right: 1px solid #eff3f4;
 }
-.sidebar.collapsed { width: 64px; }
+.sidebar.collapsed { width: 68px; }
 
 .logo {
-    padding: 20px 16px;
+    padding: 20px 16px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.logo-mark {
+    width: 36px;
+    height: 36px;
+    background: #0f1419;
+    color: #ffffff;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
+.logo-text { display: flex; flex-direction: column; }
 .logo h2 {
     margin: 0;
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     color: #0f1419;
     letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+.logo-sub {
+    font-size: 11px;
+    color: #536471;
+    letter-spacing: 0.02em;
 }
 .logo-icon { color: #0f1419; }
 
+.nav-section { padding: 16px 16px 6px; }
+.nav-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #536471;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 .nav-menu {
     flex: 1;
-    padding: 4px 0;
+    padding: 0;
     overflow-y: auto;
 }
 .nav-menu ul { list-style: none; padding: 0; margin: 0; }
-.nav-menu li { margin: 2px 12px; }
+.nav-menu li { margin: 1px 8px; }
 
 .nav-menu a {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     padding: 10px 12px;
     color: #536471;
     text-decoration: none;
-    border-radius: 9999px;
+    border-radius: 12px;
     transition: all 0.15s ease;
     cursor: pointer;
 }
 .sidebar.collapsed .nav-menu a {
     justify-content: center;
-    padding: 10px;
+    padding: 12px;
 }
 .nav-menu a:hover {
     background: #f7f9f9;
     color: #0f1419;
 }
 .nav-menu a.active {
-    background: transparent;
+    background: #eff3f4;
     color: #0f1419;
-    font-weight: 700;
 }
+.nav-menu a.active .icon { color: #0f1419; }
+.nav-menu a.active .title { font-weight: 700; }
 
-.icon { min-width: 18px; flex-shrink: 0; }
-.title { font-size: 14px; white-space: nowrap; }
+.icon { min-width: 22px; flex-shrink: 0; }
+.nav-text { display: flex; flex-direction: column; min-width: 0; }
+.title { font-size: 14px; white-space: nowrap; line-height: 1.3; }
+.subtitle {
+    font-size: 11px;
+    color: #8899a6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+.nav-menu a.active .subtitle { color: #536471; }
 
 .sidebar-footer {
     padding: 12px;
     border-top: 1px solid #eff3f4;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
+
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 12px;
+    background: #f7f9f9;
+}
+.user-avatar {
+    width: 34px;
+    height: 34px;
+    background: #0f1419;
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.user-detail { display: flex; flex-direction: column; min-width: 0; }
+.user-card-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f1419;
+    line-height: 1.3;
+}
+.user-card-role {
+    font-size: 11px;
+    color: #536471;
+    line-height: 1.3;
+}
+
 .logout-link {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     padding: 10px 12px;
     color: #536471;
     text-decoration: none;
-    border-radius: 9999px;
+    border-radius: 12px;
     transition: all 0.15s ease;
     cursor: pointer;
     font-size: 14px;
 }
 .logout-link:hover {
     background: #f7f9f9;
-    color: #0f1419;
+    color: #e0245e;
 }
 
 /* ── Main ── */
