@@ -303,8 +303,7 @@ const initMap = async (data, order) => {
     map = new TMap.Map(el, { zoom: 10, center })
 
     if (data.polyline) {
-        const coors = [...data.polyline]
-        for (let i = 2; i < coors.length; i++) coors[i] = coors[i - 2] + coors[i] / 1000000
+        const coors = data.polyline
         const path = []
         for (let i = 0; i < coors.length; i += 2) {
             if (i + 1 < coors.length) path.push(new TMap.LatLng(coors[i], coors[i + 1]))
@@ -315,6 +314,9 @@ const initMap = async (data, order) => {
                 styles: { route: new TMap.PolylineStyle({ color: '#3777FF', width: 6, borderWidth: 2, borderColor: '#FFF', lineCap: 'round' }) },
                 geometries: [{ id: 'route', styleId: 'route', paths: path }]
             })
+            const bounds = new TMap.LatLngBounds()
+            path.forEach(p => bounds.extend(p))
+            map.fitBounds(bounds, { padding: 60 })
         }
     }
 
