@@ -667,4 +667,24 @@ public class OrderServiceImpl implements OrderService {
 
         return responseList;
     }
+
+    @Override
+    public List<Order> getOrdersByBatchId(Integer batchId) {
+        QueryWrapper<DeliveryBatchOrder> batchOrderQuery = new QueryWrapper<>();
+        batchOrderQuery.eq("batch_id", batchId).orderByAsc("stop_sequence");
+        List<DeliveryBatchOrder> batchOrders = deliveryBatchOrderMapper.selectList(batchOrderQuery);
+
+        List<Order> orders = new ArrayList<>();
+        for (DeliveryBatchOrder batchOrder : batchOrders) {
+            Order order = orderMapper.selectOrderWithDetails(batchOrder.getOrderId());
+            if (order != null) {
+                if (order.getAddressId() != null) {
+                    Address address = addressMapper.selectById(order.getAddressId());
+                    order.setAddress(address);
+                }
+                orders.add(order);
+            }
+        }
+        return orders;
+    }
 }

@@ -185,11 +185,20 @@ CREATE TABLE IF NOT EXISTS `delivery_location` (
 
 -- 配送路线表
 CREATE TABLE IF NOT EXISTS `delivery_route` (
-  `id` INT PRIMARY KEY AUTO_INCREMENT,
-  `batch_id` INT NOT NULL,
-  `route_data` JSON,
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `batch_id` INT NULL,
+  `delivery_time` DATETIME NOT NULL,
+  `warehouse_id` INT NOT NULL,
+  `route_data` TEXT NOT NULL,
   `total_distance` DECIMAL(10,2),
   `total_duration` INT,
-  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`batch_id`) REFERENCES `delivery_batches`(`id`)
+  `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  `current_index` INT DEFAULT 0,
+  `started_at` DATETIME,
+  `completed_at` DATETIME,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_batch_id` (`batch_id`),
+  INDEX `idx_delivery_time_warehouse` (`delivery_time`, `warehouse_id`),
+  INDEX `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

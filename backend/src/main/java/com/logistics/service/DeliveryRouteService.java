@@ -16,12 +16,15 @@ public class DeliveryRouteService extends ServiceImpl<DeliveryRouteMapper, Deliv
 
     /**
      * 根据配送时间和仓库ID查询路线
-     *
-     * @param deliveryTime 配送时间
-     * @param warehouseId  仓库ID
-     * @return 配送路线
      */
     public DeliveryRoute getByDeliveryTimeAndWarehouse(LocalDateTime deliveryTime, Integer warehouseId) {
         return baseMapper.selectByDeliveryTimeAndWarehouse(deliveryTime, warehouseId);
+    }
+
+    /**
+     * 根据批次ID查询路线
+     */
+    public DeliveryRoute getByBatchId(Integer batchId) {
+        return baseMapper.selectByBatchId(batchId);
     }
 }

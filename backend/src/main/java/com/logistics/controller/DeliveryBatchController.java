@@ -59,32 +59,96 @@ public class DeliveryBatchController {
     private com.logistics.mapper.DeliveryBatchMapper deliveryBatchMapper;
 
     /**
-     * 开始运输批次（更新批次状态）
+     * 开始运输批次（更新批次状态 + 规划路线 + 启动模拟）
      *
      * @param batchId 批次ID
      * @return 成功/失败
      */
-    @Operation(summary = "开始运输批次", description = "配送员开始运输，将批次状态从待运输改为运输中")
+    @Operation(summary = "开始运输批次", description = "配送员开始运输，规划路线并启动配送模拟")
     @PostMapping("/start-batch")
     public Result<Void> startBatch(@Parameter(description = "批次ID") @RequestParam Integer batchId) {
         try {
             log.info("开始运输批次: batchId={}", batchId);
 
-            // 查询批次
+            // 1. 查询批次
             com.logistics.entity.DeliveryBatch batch = deliveryBatchMapper.selectById(batchId);
             if (batch == null) {
                 return Result.error("批次不存在");
             }
 
-            // 检查状态
             if (batch.getStatus() != 0) {
                 return Result.error("批次状态不正确，只能开始待运输的批次");
             }
 
-            // 更新状态为运输中
+            // 2. 更新批次状态为运输中
             batch.setStatus(1);
             batch.setStartedAt(LocalDateTime.now());
             deliveryBatchMapper.updateById(batch);
+
+            // 3. Get orders for this batch
+            Warehouse warehouse = warehouseService.getById(batch.getWarehouseId());
+            if (warehouse == null) {
+                return Result.error("仓库不存在");
+            }
+
+            List<Order> orders = orderService.getOrdersByBatchId(batchId);
+            if (orders.isEmpty()) {
+                log.info("批次 {} 已开始运输（无订单，跳过路线规划）", batchId);
+                return Result.success("开始运输成功", null);
+            }
+
+            // 4. 规划路线
+            String from = warehouse.getLatitude() + "," + warehouse.getLongitude();
+            List<String> waypoints = orders.stream()
+                    .filter(order -> order.getAddress() != null)
+                    .map(order -> order.getAddress().getLatitude() + "," + order.getAddress().getLongitude())
+                    .collect(Collectors.toList());
+
+            if (!waypoints.isEmpty()) {
+                String to = waypoints.get(waypoints.size() - 1);
+                String waypointsParam = waypoints.size() > 1 ?
+                        String.join(";", waypoints.subList(0, waypoints.size() - 1)) : null;
+
+                JSONObject routeResponse = tencentMapService.planRoute(from, to, waypointsParam);
+
+                if (routeResponse != null) {
+                    JSONObject result = routeResponse.getJSONObject("result");
+                    JSONArray routes = result.getJSONArray("routes");
+                    JSONObject route = routes.getJSONObject(0);
+
+                    Integer distance = route.getInteger("distance");
+                    Integer duration = route.getInteger("duration");
+                    JSONArray polyline = route.getJSONArray("polyline");
+
+                    // 5. 保存路线
+                    DeliveryRoute deliveryRoute = new DeliveryRoute();
+                    deliveryRoute.setBatchId(batchId);
+                    deliveryRoute.setDeliveryTime(batch.getStartedAt());
+                    deliveryRoute.setWarehouseId(batch.getWarehouseId());
+                    deliveryRoute.setRouteData(polyline.toJSONString());
+                    deliveryRoute.setTotalDistance(
+                            new java.math.BigDecimal(distance).divide(new java.math.BigDecimal(1000), 2, java.math.RoundingMode.HALF_UP)
+                    );
+                    deliveryRoute.setTotalDuration(duration);
+                    deliveryRoute.setStatus("DELIVERING");
+                    deliveryRoute.setCurrentIndex(0);
+                    deliveryRoute.setStartedAt(LocalDateTime.now());
+
+                    deliveryRouteService.save(deliveryRoute);
+
+                    // 6. 更新批次的距离和时长
+                    batch.setTotalDistance(distance);
+                    batch.setTotalDuration(duration);
+                    deliveryBatchMapper.updateById(batch);
+
+                    log.info("路线规划成功，路线ID: {}, 距离: {}m, 时长: {}min", deliveryRoute.getId(), distance, duration);
+
+                    // 7. 启动配送模拟
+                    deliverySimulationService.startSimulation(deliveryRoute.getId());
+                } else {
+                    log.warn("路线规划失败，批次 {} 已开始但无路线", batchId);
+                }
+            }
 
             log.info("批次 {} 已开始运输", batchId);
             return Result.success("开始运输成功", null);
@@ -312,6 +376,127 @@ public class DeliveryBatchController {
         } catch (Exception e) {
             log.error("获取路线详情失败", e);
             return Result.error("获取路线详情失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据批次ID获取路线详情
+     */
+    @Operation(summary = "获取批次路线详情", description = "根据批次ID获取路线规划数据")
+    @GetMapping("/route-by-batch")
+    public Result<RouteDetailResponse> getRouteByBatch(@Parameter(description = "批次ID") @RequestParam Integer batchId) {
+        try {
+            DeliveryRoute route = deliveryRouteService.getByBatchId(batchId);
+            if (route == null) {
+                return Result.error("该批次暂无路线数据");
+            }
+
+            RouteDetailResponse response = new RouteDetailResponse();
+            response.setRouteId(route.getId());
+            response.setPolyline(JSON.parseArray(route.getRouteData()));
+            response.setTotalDistance(route.getTotalDistance());
+            response.setTotalDuration(route.getTotalDuration());
+            response.setStatus(route.getStatus());
+            return Result.success(response);
+        } catch (Exception e) {
+            log.error("获取批次路线失败", e);
+            return Result.error("获取路线失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据批次ID获取当前位置
+     */
+    @Operation(summary = "获取批次配送位置", description = "根据批次ID获取实时配送位置")
+    @GetMapping("/location-by-batch")
+    public Result<CurrentLocationResponse> getLocationByBatch(@Parameter(description = "批次ID") @RequestParam Integer batchId) {
+        try {
+            DeliveryRoute route = deliveryRouteService.getByBatchId(batchId);
+            if (route == null) {
+                return Result.error("该批次暂无配送记录");
+            }
+
+            JSONArray pathPoints = tencentMapService.decompressPolyline(route.getRouteData());
+            if (pathPoints.isEmpty()) {
+                return Result.error("路径数据异常");
+            }
+
+            int currentIndex = route.getCurrentIndex();
+            if (currentIndex >= pathPoints.size()) {
+                currentIndex = pathPoints.size() - 1;
+            }
+
+            JSONArray currentPoint = pathPoints.getJSONArray(currentIndex);
+            double latitude = currentPoint.getDoubleValue(0);
+            double longitude = currentPoint.getDoubleValue(1);
+
+            DeliveryLocation location = deliveryLocationMapper.selectLatestByRouteId(route.getId());
+
+            CurrentLocationResponse response = new CurrentLocationResponse();
+            response.setLatitude(new BigDecimal(latitude));
+            response.setLongitude(new BigDecimal(longitude));
+            response.setAddress(location != null ? location.getAddress() : "位置获取中...");
+            response.setStatus(route.getStatus());
+
+            int progress = (currentIndex * 100) / pathPoints.size();
+            response.setProgress(progress);
+
+            int remainingPoints = pathPoints.size() - currentIndex;
+            BigDecimal remainingDistance = route.getTotalDistance()
+                    .multiply(new BigDecimal(remainingPoints))
+                    .divide(new BigDecimal(pathPoints.size()), 2, RoundingMode.HALF_UP);
+            response.setRemainingDistance(remainingDistance);
+
+            int remainingTime = (route.getTotalDuration() * remainingPoints) / pathPoints.size();
+            response.setRemainingTime(remainingTime);
+
+            return Result.success(response);
+        } catch (Exception e) {
+            log.error("获取批次位置失败", e);
+            return Result.error("获取位置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 完成批次配送
+     */
+    @Operation(summary = "完成批次配送", description = "配送员确认完成整个批次的配送")
+    @PostMapping("/complete-batch")
+    public Result<Void> completeBatch(@Parameter(description = "批次ID") @RequestParam Integer batchId) {
+        try {
+            com.logistics.entity.DeliveryBatch batch = deliveryBatchMapper.selectById(batchId);
+            if (batch == null) {
+                return Result.error("批次不存在");
+            }
+            if (batch.getStatus() != 1) {
+                return Result.error("只能完成配送中的批次");
+            }
+
+            // 更新批次状态
+            batch.setStatus(2);
+            batch.setCompletedAt(LocalDateTime.now());
+            deliveryBatchMapper.updateById(batch);
+
+            // 停止路线模拟
+            DeliveryRoute route = deliveryRouteService.getByBatchId(batchId);
+            if (route != null && "DELIVERING".equals(route.getStatus())) {
+                route.setStatus("COMPLETED");
+                route.setCompletedAt(LocalDateTime.now());
+                deliveryRouteService.updateById(route);
+            }
+
+            // 更新所有订单状态为已到达(4)
+            List<Order> orders = orderService.getOrdersByBatchId(batchId);
+            List<Integer> orderIds = orders.stream().map(Order::getOrderId).collect(Collectors.toList());
+            if (!orderIds.isEmpty()) {
+                orderService.completeDelivery(orderIds);
+            }
+
+            log.info("批次 {} 配送完成", batchId);
+            return Result.success("配送完成", null);
+        } catch (Exception e) {
+            log.error("完成批次配送失败", e);
+            return Result.error("完成配送失败: " + e.getMessage());
         }
     }
 

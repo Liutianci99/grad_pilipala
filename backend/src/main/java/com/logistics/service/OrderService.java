@@ -124,4 +124,9 @@ public interface OrderService {
      * @return 批次列表
      */
     List<com.logistics.dto.DeliveryBatchResponse> getCompletedBatchesWithStatus(Long deliveryPersonnelId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime);
+
+    /**
+     * 根据批次ID获取订单列表（含地址信息）
+     */
+    List<Order> getOrdersByBatchId(Integer batchId);
 }

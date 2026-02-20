@@ -23,6 +23,11 @@ public class DeliveryRoute {
     private Long id;
 
     /**
+     * 关联的运输批次ID
+     */
+    private Integer batchId;
+
+    /**
      * 配送批次时间
      */
     private LocalDateTime deliveryTime;
