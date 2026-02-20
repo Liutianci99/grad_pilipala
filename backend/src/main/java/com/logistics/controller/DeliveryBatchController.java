@@ -58,6 +58,9 @@ public class DeliveryBatchController {
     @Autowired
     private com.logistics.mapper.DeliveryBatchMapper deliveryBatchMapper;
 
+    @Autowired
+    private com.logistics.mapper.DeliveryBatchOrderMapper deliveryBatchOrderMapper;
+
     /**
      * 开始运输批次（更新批次状态 + 规划路线 + 启动模拟）
      *
@@ -506,6 +509,86 @@ public class DeliveryBatchController {
      * @param routeId 路线ID
      * @return 成功/失败
      */
+    /**
+     * 根据订单ID查询物流追踪信息（顾客用）
+     */
+    @Operation(summary = "订单物流追踪", description = "根据订单ID查询所属批次的物流信息，包括路线和实时位置")
+    @GetMapping("/track-by-order")
+    public Result<?> trackByOrder(@Parameter(description = "订单ID") @RequestParam Integer orderId) {
+        try {
+            // 1. Find which batch this order belongs to
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.logistics.entity.DeliveryBatchOrder> qw =
+                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            qw.eq("order_id", orderId);
+            com.logistics.entity.DeliveryBatchOrder dbo = deliveryBatchOrderMapper.selectOne(qw);
+
+            if (dbo == null) {
+                return Result.error("该订单暂无物流信息");
+            }
+
+            Integer batchId = dbo.getBatchId();
+
+            // 2. Get batch info
+            com.logistics.entity.DeliveryBatch batch = deliveryBatchMapper.selectById(batchId);
+            if (batch == null) {
+                return Result.error("批次信息不存在");
+            }
+
+            // 3. Build response
+            JSONObject result = new JSONObject();
+            result.put("batchId", batchId);
+            result.put("batchStatus", batch.getStatus()); // 0=待出发, 1=配送中, 2=已完成
+            result.put("startedAt", batch.getStartedAt());
+            result.put("completedAt", batch.getCompletedAt());
+
+            // 4. Get warehouse info
+            Warehouse warehouse = warehouseService.getById(batch.getWarehouseId());
+            if (warehouse != null) {
+                result.put("warehouseName", warehouse.getName());
+                result.put("warehouseAddress", warehouse.getAddress());
+            }
+
+            // 5. If delivering, get route + location
+            if (batch.getStatus() == 1) {
+                DeliveryRoute route = deliveryRouteService.getByBatchId(batchId);
+                if (route != null) {
+                    // Route polyline
+                    JSONArray polyline = JSON.parseArray(route.getRouteData());
+                    result.put("polyline", polyline);
+                    result.put("totalDistance", route.getTotalDistance());
+                    result.put("totalDuration", route.getTotalDuration());
+
+                    // Current location
+                    JSONArray pathPoints = tencentMapService.decompressPolyline(route.getRouteData());
+                    if (!pathPoints.isEmpty()) {
+                        int currentIndex = route.getCurrentIndex();
+                        if (currentIndex >= pathPoints.size()) currentIndex = pathPoints.size() - 1;
+                        JSONArray currentPoint = pathPoints.getJSONArray(currentIndex);
+                        double lat = currentPoint.getDoubleValue(0);
+                        double lng = currentPoint.getDoubleValue(1);
+
+                        result.put("currentLat", lat);
+                        result.put("currentLng", lng);
+
+                        // Progress
+                        double progress = pathPoints.size() > 1 ? (double) currentIndex / (pathPoints.size() - 1) * 100 : 0;
+                        result.put("progress", BigDecimal.valueOf(progress).setScale(1, RoundingMode.HALF_UP));
+
+                        // Remaining time
+                        double remainingRatio = 1.0 - (double) currentIndex / Math.max(pathPoints.size() - 1, 1);
+                        double remainingMinutes = route.getTotalDuration() * remainingRatio;
+                        result.put("remainingTime", BigDecimal.valueOf(remainingMinutes).setScale(0, RoundingMode.HALF_UP));
+                    }
+                }
+            }
+
+            return Result.success("查询成功", result);
+        } catch (Exception e) {
+            log.error("查询订单物流失败, orderId={}", orderId, e);
+            return Result.error("查询物流信息失败: " + e.getMessage());
+        }
+    }
+
     @Operation(summary = "停止配送", description = "配送员停止当前配送批次")
     @PostMapping("/stop")
     public Result<Void> stopDelivery(@Parameter(description = "路线ID") @RequestParam Long routeId) {
