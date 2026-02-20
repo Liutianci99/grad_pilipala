@@ -25,7 +25,7 @@
                 </div>
             </div>
 
-            <div v-if="filteredOrders.length === 0 && !loading" class="empty-state">暂无订单</div>
+            <div v-if="filteredOrders.length === 0 && !loading" class="empty-state"><p>暂无订单</p></div>
 
             <div class="order-list">
                 <div
@@ -40,7 +40,7 @@
                     <div class="order-card-center">
                         <div class="order-title">{{ order.productName }}</div>
                         <div class="order-meta">#{{ order.orderId }} · ¥{{ order.unitPrice }} × {{ order.quantity }}</div>
-                        <div class="order-time">{{ formatTime(order.orderTime) }}</div>
+                        <div class="order-time-text">{{ formatTime(order.orderTime) }}</div>
                     </div>
                     <div class="order-card-right">
                         <span class="badge" :class="getStatusClass(order.status)">{{ getStatusText(order.status) }}</span>
@@ -418,6 +418,7 @@ onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 </script>
 
 <style scoped>
+/* Order list */
 .order-list { display: flex; flex-direction: column; gap: 8px; }
 
 .order-card {
@@ -431,35 +432,28 @@ onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 .order-card-center { flex: 1; min-width: 0; }
 .order-title { font-size: 14px; font-weight: 600; color: #0f1419; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .order-meta { font-size: 12px; color: #536471; margin-top: 2px; }
-.order-time { font-size: 11px; color: #8899a6; margin-top: 2px; }
+.order-time-text { font-size: 11px; color: #8899a6; margin-top: 2px; }
 .order-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .arrow { color: #8899a6; font-size: 16px; }
 
-.badge { padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+/* Status badges */
 .badge-default { background: #f7f9f9; color: #536471; border: 1px solid #eff3f4; }
 .badge-transit { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .badge-arrived { background: #fff7e6; color: #b45309; border: 1px solid #fde68a; }
 .badge-done { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
-.empty-state { text-align: center; padding: 48px; color: #8899a6; font-size: 14px; }
+/* No tracking */
 .no-tracking { text-align: center; padding: 24px; color: #8899a6; font-size: 14px; }
 
 /* Detail view */
 .detail-view { width: 100%; }
 
-.map-section { background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-.map-container { width: 100%; height: 420px; border-radius: 8px; overflow: hidden; }
-.route-info { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eff3f4; }
-.route-info-row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
-.info-item { display: flex; align-items: center; gap: 6px; }
-.info-item .label { font-size: 13px; color: #536471; }
-.info-item .value { font-size: 14px; color: #0f1419; font-weight: 700; }
-.info-item .value.highlight { color: #1d4ed8; }
-
+/* Progress bar inline */
 .progress-inline { display: inline-flex; align-items: center; gap: 8px; }
 .progress-bar-inline { width: 80px; height: 4px; background: #eff3f4; border-radius: 2px; overflow: hidden; display: inline-block; }
 .progress-fill-inline { height: 100%; background: #0f1419; border-radius: 2px; transition: width 0.5s; display: block; }
 
+/* Info cards */
 .info-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .info-card {
     display: flex; gap: 12px; align-items: flex-start;
@@ -471,6 +465,7 @@ onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 .info-card-value { font-size: 14px; color: #0f1419; font-weight: 600; margin-top: 2px; }
 .info-card-sub { font-size: 12px; color: #536471; margin-top: 2px; }
 
+/* Timeline */
 .timeline-section { background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 20px; }
 .timeline-section h3 { font-size: 15px; font-weight: 600; color: #0f1419; margin: 0 0 16px 0; }
 
