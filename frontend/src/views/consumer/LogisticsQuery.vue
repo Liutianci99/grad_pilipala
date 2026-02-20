@@ -2,97 +2,172 @@
     <div class="page-container">
         <h1>物流查询</h1>
 
-        <!-- Search -->
-        <div class="filter-bar">
-            <div class="search-box" style="max-width:100%">
-                <input
-                    type="text"
-                    v-model="searchOrderId"
-                    placeholder="输入订单号查询物流..."
-                    class="search-input"
-                    @keyup.enter="searchTracking"
-                />
-                <button @click="searchTracking" class="btn btn-primary">查询</button>
-            </div>
-        </div>
-
-        <!-- Orders in transit -->
-        <div class="section-title" v-if="transitOrders.length">运输中的订单</div>
-        <div class="order-list">
-            <div
-                v-for="order in transitOrders"
-                :key="order.orderId"
-                class="tracking-card"
-                :class="{ active: selectedOrderId === order.orderId }"
-                @click="selectOrder(order.orderId)"
-            >
-                <div class="tracking-card-header">
-                    <span class="order-id">#{{ order.orderId }}</span>
-                    <span class="badge" :class="getStatusClass(order.status)">{{ getStatusText(order.status) }}</span>
+        <!-- No order selected: show order list -->
+        <div v-if="!selectedOrder">
+            <div class="filter-bar">
+                <div class="search-box" style="max-width:100%">
+                    <input
+                        type="text"
+                        v-model="searchKeyword"
+                        placeholder="搜索订单号或商品名称..."
+                        class="search-input"
+                        @keyup.enter="handleSearch"
+                    />
+                    <button @click="handleSearch" class="btn btn-ghost">搜索</button>
                 </div>
-                <div class="tracking-card-body">
-                    <div class="product-info">
+                <div class="tabs">
+                    <button :class="['tab', { active: currentTab === 'transit' }]" @click="changeTab('transit')">运输中</button>
+                    <button :class="['tab', { active: currentTab === 'all' }]" @click="changeTab('all')">全部</button>
+                </div>
+            </div>
+
+            <div v-if="filteredOrders.length === 0 && !loading" class="empty-state">暂无订单</div>
+
+            <div class="order-list">
+                <div
+                    v-for="order in filteredOrders"
+                    :key="order.orderId"
+                    class="order-card"
+                    @click="viewTracking(order)"
+                >
+                    <div class="order-card-left">
                         <img :src="order.imageUrl || '/placeholder.png'" :alt="order.productName" class="product-thumb" />
-                        <div>
-                            <div class="product-name">{{ order.productName }}</div>
-                            <div class="product-meta">¥{{ order.unitPrice }} × {{ order.quantity }}</div>
-                        </div>
                     </div>
-                </div>
-                <div class="tracking-card-footer" v-if="order.trackingInfo">
-                    <div class="progress-bar">
-                        <div class="progress-fill" :style="{ width: (order.trackingInfo.progress || 0) + '%' }"></div>
+                    <div class="order-card-center">
+                        <div class="order-title">{{ order.productName }}</div>
+                        <div class="order-meta">#{{ order.orderId }} · ¥{{ order.unitPrice }} × {{ order.quantity }}</div>
+                        <div class="order-time">{{ formatTime(order.orderTime) }}</div>
                     </div>
-                    <div class="tracking-meta">
-                        <span>{{ order.trackingInfo.warehouseName || '仓库' }}</span>
-                        <span v-if="order.trackingInfo.remainingTime">
-                            预计 {{ formatRemainingTime(order.trackingInfo.remainingTime) }}
-                        </span>
+                    <div class="order-card-right">
+                        <span class="badge" :class="getStatusClass(order.status)">{{ getStatusText(order.status) }}</span>
+                        <span class="arrow">→</span>
                     </div>
-                </div>
-                <div class="tracking-card-footer" v-else-if="order.status >= 2 && order.status <= 3">
-                    <span class="tracking-hint">点击查看物流详情</span>
                 </div>
             </div>
         </div>
 
-        <div v-if="transitOrders.length === 0 && !loading" class="empty-state">暂无运输中的订单</div>
-
-        <!-- Map modal -->
-        <div v-if="showMap" class="map-overlay" @click.self="closeMap">
-            <div class="map-modal">
-                <div class="map-modal-header">
-                    <h3>订单 #{{ selectedOrderId }} 物流追踪</h3>
-                    <button class="btn-close" @click="closeMap">✕</button>
+        <!-- Order selected: show tracking detail (like driver's 查看详情) -->
+        <div v-else class="detail-container">
+            <div class="detail-header">
+                <button class="btn btn-ghost btn-sm" @click="goBack">← 返回</button>
+                <div class="detail-header-info">
+                    <span class="order-id">#{{ selectedOrder.orderId }} · {{ selectedOrder.productName }}</span>
+                    <span class="badge" :class="getBatchStatusClass(trackingData.batchStatus)">
+                        {{ getBatchStatusText(trackingData.batchStatus) }}
+                    </span>
                 </div>
-                <div class="map-modal-body">
-                    <div id="tracking-map" class="map-container"></div>
-                    <div v-if="trackingDetail" class="tracking-detail">
-                        <div class="detail-row">
-                            <div class="detail-item">
-                                <span class="label">状态</span>
-                                <span class="value badge" :class="getBatchStatusClass(trackingDetail.batchStatus)">
-                                    {{ getBatchStatusText(trackingDetail.batchStatus) }}
+            </div>
+
+            <!-- Map -->
+            <div class="map-section">
+                <div id="tracking-map" class="map-container"></div>
+                <div v-if="trackingData.totalDistance" class="route-info">
+                    <div class="route-info-row">
+                        <div class="info-item">
+                            <span class="label">总距离：</span>
+                            <span class="value">{{ trackingData.totalDistance }} 公里</span>
+                        </div>
+                        <div class="info-item" v-if="trackingData.totalDuration">
+                            <span class="label">预计总时间：</span>
+                            <span class="value">{{ formatDuration(trackingData.totalDuration) }}</span>
+                        </div>
+                    </div>
+                    <div class="route-info-row" v-if="trackingData.remainingTime > 0">
+                        <div class="info-item">
+                            <span class="label">剩余时间：</span>
+                            <span class="value highlight">{{ formatRemainingTime(trackingData.remainingTime) }}</span>
+                        </div>
+                        <div class="info-item" v-if="trackingData.progress">
+                            <span class="label">配送进度：</span>
+                            <span class="value">
+                                <span class="progress-inline">
+                                    <span class="progress-bar-inline">
+                                        <span class="progress-fill-inline" :style="{ width: trackingData.progress + '%' }"></span>
+                                    </span>
+                                    {{ trackingData.progress }}%
                                 </span>
-                            </div>
-                            <div class="detail-item" v-if="trackingDetail.totalDistance">
-                                <span class="label">总距离</span>
-                                <span class="value">{{ trackingDetail.totalDistance }} 公里</span>
-                            </div>
-                            <div class="detail-item" v-if="trackingDetail.remainingTime">
-                                <span class="label">预计剩余</span>
-                                <span class="value">{{ formatRemainingTime(trackingDetail.remainingTime) }}</span>
-                            </div>
-                            <div class="detail-item" v-if="trackingDetail.progress">
-                                <span class="label">进度</span>
-                                <span class="value">{{ trackingDetail.progress }}%</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery info -->
+            <div class="info-cards">
+                <div class="info-card" v-if="trackingData.warehouseName">
+                    <div class="info-card-icon">🏭</div>
+                    <div class="info-card-content">
+                        <div class="info-card-label">发货仓库</div>
+                        <div class="info-card-value">{{ trackingData.warehouseName }}</div>
+                        <div class="info-card-sub" v-if="trackingData.warehouseAddress">{{ trackingData.warehouseAddress }}</div>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-icon">📦</div>
+                    <div class="info-card-content">
+                        <div class="info-card-label">收货地址</div>
+                        <div class="info-card-value">
+                            {{ selectedOrder.address?.province }}{{ selectedOrder.address?.city }}{{ selectedOrder.address?.district }}{{ selectedOrder.address?.detailAddress }}
+                        </div>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-icon">🛒</div>
+                    <div class="info-card-content">
+                        <div class="info-card-label">商品信息</div>
+                        <div class="info-card-value">{{ selectedOrder.productName }} × {{ selectedOrder.quantity }}</div>
+                        <div class="info-card-sub">合计 ¥{{ selectedOrder.totalAmount }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="timeline-section">
+                <h3>物流动态</h3>
+                <div class="timeline">
+                    <div class="timeline-item" :class="{ active: selectedOrder.status >= 5 }">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">已收货</div>
+                            <div class="timeline-time" v-if="selectedOrder.receiveTime">{{ formatFullTime(selectedOrder.receiveTime) }}</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item" :class="{ active: selectedOrder.status >= 4 }">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">已到达</div>
+                            <div class="timeline-time" v-if="selectedOrder.deliveryTime">{{ formatFullTime(selectedOrder.deliveryTime) }}</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item" :class="{ active: selectedOrder.status >= 3, delivering: trackingData.batchStatus === 1 }">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">运输中</div>
+                            <div class="timeline-time" v-if="trackingData.startedAt">{{ formatFullTime(trackingData.startedAt) }}</div>
+                            <div class="timeline-detail" v-if="trackingData.batchStatus === 1 && trackingData.remainingTime > 0">
+                                预计 {{ formatRemainingTime(trackingData.remainingTime) }} 后送达
                             </div>
                         </div>
-                        <div class="detail-row" v-if="trackingDetail.warehouseName">
-                            <div class="detail-item full">
-                                <span class="label">发货仓库</span>
-                                <span class="value">{{ trackingDetail.warehouseName }}</span>
-                            </div>
+                    </div>
+                    <div class="timeline-item" :class="{ active: selectedOrder.status >= 2 }">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">已揽收</div>
+                            <div class="timeline-time" v-if="selectedOrder.pickupTime">{{ formatFullTime(selectedOrder.pickupTime) }}</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item" :class="{ active: selectedOrder.status >= 1 }">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">已发货</div>
+                            <div class="timeline-time" v-if="selectedOrder.shipTime">{{ formatFullTime(selectedOrder.shipTime) }}</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item active">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">已下单</div>
+                            <div class="timeline-time">{{ formatFullTime(selectedOrder.orderTime) }}</div>
                         </div>
                     </div>
                 </div>
@@ -103,105 +178,112 @@
 
 <script setup>
 /* global TMap */
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import request from '@/utils/request'
 
-const searchOrderId = ref('')
-const transitOrders = ref([])
-const selectedOrderId = ref(null)
-const showMap = ref(false)
-const trackingDetail = ref(null)
 const loading = ref(false)
+const searchKeyword = ref('')
+const activeSearch = ref('')
+const currentTab = ref('transit')
+const orders = ref([])
+const selectedOrder = ref(null)
+const trackingData = ref({})
 
 let map = null
 let truckMarker = null
 let routePolyline = null
-let warehouseMarker = null
+let destMarker = null
 let pollingTimer = null
 
+// ── Filtered orders ──
+const filteredOrders = computed(() => {
+    let list = orders.value
+    if (currentTab.value === 'transit') {
+        list = list.filter(o => o.status >= 1 && o.status <= 3)
+    }
+    if (activeSearch.value) {
+        const q = activeSearch.value.toLowerCase()
+        list = list.filter(o =>
+            String(o.orderId).includes(q) ||
+            (o.productName && o.productName.toLowerCase().includes(q))
+        )
+    }
+    return list
+})
+
 // ── Load orders ──
-const loadTransitOrders = async () => {
+const loadOrders = async () => {
     loading.value = true
     try {
-        const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}')
-        if (!userInfo.id) return
-        // Get orders with status 1(已发货), 2(已揽收), 3(运输中)
-        const res = await request.get('/orders/my', { params: { customerId: userInfo.id } })
-        if (res.code === 200 && res.data) {
-            transitOrders.value = res.data.filter(o => o.status >= 1 && o.status <= 3)
-        }
-    } catch (e) {
-        console.error('获取订单失败:', e)
-    } finally { loading.value = false }
+        const user = JSON.parse(sessionStorage.getItem('userInfo') || '{}')
+        if (!user.id) return
+        const res = await request.get('/orders/my', { params: { customerId: user.id } })
+        if (res.code === 200) orders.value = res.data || []
+    } catch (e) { console.error('获取订单失败:', e) }
+    finally { loading.value = false }
 }
 
-// ── Search ──
-const searchTracking = () => {
-    const id = parseInt(searchOrderId.value)
-    if (!id) return
-    selectOrder(id)
-}
+const changeTab = (tab) => { currentTab.value = tab }
+const handleSearch = () => { activeSearch.value = searchKeyword.value }
 
-// ── Select order → fetch tracking ──
-const selectOrder = async (orderId) => {
-    selectedOrderId.value = orderId
+// ── View tracking ──
+const viewTracking = async (order) => {
+    selectedOrder.value = order
+    trackingData.value = {}
+
     try {
-        const res = await request.get('/delivery-batch/track-by-order', { params: { orderId } })
+        const res = await request.get('/delivery-batch/track-by-order', { params: { orderId: order.orderId } })
         if (res.code === 200 && res.data) {
-            trackingDetail.value = res.data
-
-            // Update the order's tracking info in the list
-            const order = transitOrders.value.find(o => o.orderId === orderId)
-            if (order) order.trackingInfo = res.data
-
-            // Show map if delivering
-            if (res.data.batchStatus === 1 && res.data.currentLat) {
-                showMap.value = true
-                await initTrackingMap(res.data)
-                startPolling(orderId)
-            } else if (res.data.batchStatus === 2) {
-                showMap.value = true
-                await initTrackingMap(res.data)
-            } else {
-                // 待出发 — no map yet
-                showMap.value = true
-                trackingDetail.value = res.data
-                setTimeout(() => initEmptyMap(res.data), 100)
-            }
+            trackingData.value = res.data
+            // Wait for DOM then init map
+            setTimeout(async () => {
+                await initMap(res.data, order)
+                if (res.data.batchStatus === 1) startPolling(order.orderId)
+            }, 150)
         } else {
-            trackingDetail.value = null
-            showMap.value = true
-            setTimeout(() => initEmptyMap(null), 100)
+            // No tracking data yet — show empty map
+            setTimeout(() => initEmptyMap(), 150)
         }
     } catch (e) {
         console.error('查询物流失败:', e)
+        setTimeout(() => initEmptyMap(), 150)
     }
+}
+
+const goBack = () => {
+    selectedOrder.value = null
+    trackingData.value = {}
+    stopPolling()
+    if (map) { map.destroy(); map = null }
+    truckMarker = null; routePolyline = null; destMarker = null
 }
 
 // ── Map ──
 const waitForTMap = () => new Promise((resolve, reject) => {
     if (window.TMap) { resolve(); return }
     let n = 0
-    const t = setInterval(() => { n++; if (window.TMap) { clearInterval(t); resolve() } else if (n >= 50) { clearInterval(t); reject() } }, 100)
+    const t = setInterval(() => {
+        n++
+        if (window.TMap) { clearInterval(t); resolve() }
+        else if (n >= 50) { clearInterval(t); reject() }
+    }, 100)
 })
 
-const initTrackingMap = async (data) => {
-    await waitForTMap()
-    await new Promise(r => setTimeout(r, 100)) // wait for DOM
-
+const initMap = async (data, order) => {
+    try { await waitForTMap() } catch { return }
     const el = document.getElementById('tracking-map')
     if (!el) return
 
+    if (map) { map.destroy(); map = null }
+    truckMarker = null; routePolyline = null; destMarker = null
+
     const center = data.currentLat
         ? new TMap.LatLng(data.currentLat, data.currentLng)
-        : new TMap.LatLng(39.9, 116.4) // default Beijing
-
-    if (map) { map.destroy(); map = null }
-    truckMarker = null; routePolyline = null; warehouseMarker = null
+        : new TMap.LatLng(39.9, 116.4)
 
     map = new TMap.Map(el, { zoom: 10, center })
 
-    // Draw route polyline
+    // Route polyline
     if (data.polyline) {
         const coors = [...data.polyline]
         for (let i = 2; i < coors.length; i++) coors[i] = coors[i - 2] + coors[i] / 1000000
@@ -209,10 +291,28 @@ const initTrackingMap = async (data) => {
         for (let i = 0; i < coors.length; i += 2) {
             if (i + 1 < coors.length) path.push(new TMap.LatLng(coors[i], coors[i + 1]))
         }
-        routePolyline = new TMap.MultiPolyline({
+        if (path.length) {
+            routePolyline = new TMap.MultiPolyline({
+                map,
+                styles: { route: new TMap.PolylineStyle({ color: '#3777FF', width: 6, borderWidth: 2, borderColor: '#FFF', lineCap: 'round' }) },
+                geometries: [{ id: 'route', styleId: 'route', paths: path }]
+            })
+        }
+    }
+
+    // Destination marker (customer's address)
+    if (order.address?.latitude && order.address?.longitude) {
+        destMarker = new TMap.MultiMarker({
             map,
-            styles: { route: new TMap.PolylineStyle({ color: '#3777FF', width: 6, borderWidth: 2, borderColor: '#FFF', lineCap: 'round' }) },
-            geometries: [{ id: 'route', styleId: 'route', paths: path }]
+            styles: {
+                dest: new TMap.MarkerStyle({
+                    width: 36, height: 36, anchor: { x: 18, y: 36 },
+                    src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+                        '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><circle cx="18" cy="18" r="16" fill="#15803d" stroke="white" stroke-width="3"/><text x="18" y="24" text-anchor="middle" fill="white" font-size="16">📍</text></svg>'
+                    )
+                })
+            },
+            geometries: [{ id: 'dest', styleId: 'dest', position: new TMap.LatLng(order.address.latitude, order.address.longitude) }]
         })
     }
 
@@ -233,9 +333,8 @@ const initTrackingMap = async (data) => {
     }
 }
 
-const initEmptyMap = async (data) => {
-    await waitForTMap()
-    await new Promise(r => setTimeout(r, 100))
+const initEmptyMap = async () => {
+    try { await waitForTMap() } catch { return }
     const el = document.getElementById('tracking-map')
     if (!el) return
     if (map) { map.destroy(); map = null }
@@ -249,42 +348,46 @@ const startPolling = (orderId) => {
         try {
             const res = await request.get('/delivery-batch/track-by-order', { params: { orderId } })
             if (res.code === 200 && res.data) {
-                trackingDetail.value = res.data
+                trackingData.value = res.data
                 if (res.data.currentLat && truckMarker) {
                     const pos = new TMap.LatLng(res.data.currentLat, res.data.currentLng)
                     truckMarker.updateGeometries([{ id: 'truck', styleId: 'truck', position: pos }])
                 }
                 if (res.data.batchStatus === 2) stopPolling()
             }
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
     }, 5000)
 }
 const stopPolling = () => { if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null } }
 
-const closeMap = () => {
-    showMap.value = false
-    stopPolling()
-    if (map) { map.destroy(); map = null }
-    truckMarker = null; routePolyline = null
-}
-
 // ── Helpers ──
 const getStatusText = (s) => {
-    const m = { 0: '未发货', 1: '已发货', 2: '已揽收', 3: '运输中', 4: '已到达', 5: '已收货' }
+    const m = { '-1': '已取消', 0: '未发货', 1: '已发货', 2: '已揽收', 3: '运输中', 4: '已到达', 5: '已收货' }
     return m[s] || '未知'
 }
 const getStatusClass = (s) => {
-    if (s <= 1) return 'badge-pending'
+    if (s <= 0) return 'badge-default'
     if (s <= 3) return 'badge-transit'
+    if (s === 4) return 'badge-arrived'
     return 'badge-done'
 }
-const getBatchStatusText = (s) => {
-    const m = { 0: '待出发', 1: '配送中', 2: '已完成' }
-    return m[s] || '未知'
+const getBatchStatusText = (s) => ({ 0: '待出发', 1: '配送中', 2: '已完成' }[s] || '未知')
+const getBatchStatusClass = (s) => ({ 0: 'badge-default', 1: 'badge-transit', 2: 'badge-done' }[s] || '')
+
+const formatTime = (t) => {
+    if (!t) return ''
+    const d = new Date(t)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-const getBatchStatusClass = (s) => {
-    const m = { 0: 'badge-pending', 1: 'badge-transit', 2: 'badge-done' }
-    return m[s] || ''
+const formatFullTime = (t) => {
+    if (!t) return ''
+    const d = new Date(t)
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+const formatDuration = (min) => {
+    if (!min) return ''
+    const h = Math.floor(min / 60), m = min % 60
+    return h > 0 ? (m > 0 ? `${h}小时${m}分钟` : `${h}小时`) : `${m}分钟`
 }
 const formatRemainingTime = (min) => {
     if (!min || min <= 0) return '即将到达'
@@ -292,79 +395,106 @@ const formatRemainingTime = (min) => {
     return m >= 60 ? `${Math.floor(m / 60)}小时${m % 60 > 0 ? m % 60 + '分钟' : ''}` : `${m}分钟`
 }
 
-onMounted(() => loadTransitOrders())
+onMounted(() => loadOrders())
 onUnmounted(() => { stopPolling(); if (map) map.destroy() })
 </script>
 
 <style scoped>
-.section-title { font-size: 14px; font-weight: 600; color: #536471; margin: 16px 0 10px; }
+/* Order list */
+.order-list { display: flex; flex-direction: column; gap: 8px; }
 
-.order-list { display: flex; flex-direction: column; gap: 10px; }
-
-.tracking-card {
+.order-card {
+    display: flex; align-items: center; gap: 12px;
     background: #fff; border: 1px solid #eff3f4; border-radius: 12px;
-    padding: 14px; cursor: pointer; transition: all 0.15s;
+    padding: 12px 16px; cursor: pointer; transition: all 0.15s;
 }
-.tracking-card:hover { border-color: #cfd9de; }
-.tracking-card.active { border-color: #0f1419; }
+.order-card:hover { border-color: #cfd9de; background: #f7f9f9; }
 
-.tracking-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.order-id { font-size: 13px; font-weight: 600; color: #0f1419; }
+.product-thumb { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: #f7f9f9; flex-shrink: 0; }
+.order-card-center { flex: 1; min-width: 0; }
+.order-title { font-size: 14px; font-weight: 600; color: #0f1419; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.order-meta { font-size: 12px; color: #536471; margin-top: 2px; }
+.order-time { font-size: 11px; color: #8899a6; margin-top: 2px; }
+.order-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.arrow { color: #8899a6; font-size: 16px; }
 
 .badge { padding: 2px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
-.badge-pending { background: #fff7e6; color: #b45309; border: 1px solid #fde68a; }
+.badge-default { background: #f7f9f9; color: #536471; border: 1px solid #eff3f4; }
 .badge-transit { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.badge-arrived { background: #fff7e6; color: #b45309; border: 1px solid #fde68a; }
 .badge-done { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
-.tracking-card-body { display: flex; }
-.product-info { display: flex; gap: 10px; align-items: center; }
-.product-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #f7f9f9; }
-.product-name { font-size: 13px; font-weight: 600; color: #0f1419; }
-.product-meta { font-size: 12px; color: #536471; margin-top: 2px; }
+.empty-state { text-align: center; padding: 48px; color: #8899a6; font-size: 14px; }
 
-.tracking-card-footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid #eff3f4; }
-.progress-bar { height: 4px; background: #eff3f4; border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
-.progress-fill { height: 100%; background: #0f1419; border-radius: 2px; transition: width 0.5s; }
-.tracking-meta { display: flex; justify-content: space-between; font-size: 11px; color: #536471; }
-.tracking-hint { font-size: 12px; color: #8899a6; }
+/* Detail view */
+.detail-container { width: 100%; }
+.detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.detail-header-info { display: flex; align-items: center; gap: 10px; }
+.order-id { font-size: 14px; font-weight: 600; color: #0f1419; }
 
-.empty-state { text-align: center; padding: 40px; color: #8899a6; font-size: 14px; }
+/* Map */
+.map-section { background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.map-container { width: 100%; height: 420px; border-radius: 8px; overflow: hidden; }
+.route-info { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eff3f4; }
+.route-info-row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.info-item { display: flex; align-items: center; gap: 6px; }
+.info-item .label { font-size: 13px; color: #536471; }
+.info-item .value { font-size: 14px; color: #0f1419; font-weight: 700; }
+.info-item .value.highlight { color: #1d4ed8; }
 
-/* Map modal */
-.map-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5); z-index: 1000;
-    display: flex; align-items: center; justify-content: center;
+.progress-inline { display: inline-flex; align-items: center; gap: 8px; }
+.progress-bar-inline { width: 80px; height: 4px; background: #eff3f4; border-radius: 2px; overflow: hidden; display: inline-block; }
+.progress-fill-inline { height: 100%; background: #0f1419; border-radius: 2px; transition: width 0.5s; display: block; }
+
+/* Info cards */
+.info-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.info-card {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 14px 16px;
 }
-.map-modal {
-    background: #fff; border-radius: 16px; width: 90%; max-width: 800px;
-    max-height: 90vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-.map-modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 20px; border-bottom: 1px solid #eff3f4;
-}
-.map-modal-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: #0f1419; }
-.btn-close {
-    width: 32px; height: 32px; border-radius: 50%; border: none;
-    background: #f7f9f9; font-size: 16px; cursor: pointer; color: #536471;
-    display: flex; align-items: center; justify-content: center;
-}
-.btn-close:hover { background: #eff3f4; }
+.info-card-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.info-card-content { flex: 1; }
+.info-card-label { font-size: 11px; color: #8899a6; text-transform: uppercase; letter-spacing: 0.5px; }
+.info-card-value { font-size: 14px; color: #0f1419; font-weight: 600; margin-top: 2px; }
+.info-card-sub { font-size: 12px; color: #536471; margin-top: 2px; }
 
-.map-modal-body { padding: 16px; }
-.map-container { width: 100%; height: 400px; border-radius: 10px; overflow: hidden; }
+/* Timeline */
+.timeline-section {
+    background: #fff; border: 1px solid #eff3f4; border-radius: 12px; padding: 20px;
+}
+.timeline-section h3 { font-size: 15px; font-weight: 600; color: #0f1419; margin: 0 0 16px 0; }
 
-.tracking-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eff3f4; }
-.detail-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 8px; }
-.detail-item { display: flex; align-items: center; gap: 6px; }
-.detail-item.full { flex: 1; }
-.detail-item .label { font-size: 12px; color: #536471; }
-.detail-item .value { font-size: 13px; color: #0f1419; font-weight: 600; }
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before {
+    content: ''; position: absolute; left: 7px; top: 4px; bottom: 4px;
+    width: 2px; background: #eff3f4;
+}
+
+.timeline-item { position: relative; padding-bottom: 20px; }
+.timeline-item:last-child { padding-bottom: 0; }
+
+.timeline-dot {
+    position: absolute; left: -24px; top: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #eff3f4; border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #eff3f4;
+}
+.timeline-item.active .timeline-dot { background: #0f1419; box-shadow: 0 0 0 2px #0f1419; }
+.timeline-item.delivering .timeline-dot { background: #1d4ed8; box-shadow: 0 0 0 2px #1d4ed8; animation: pulse 2s infinite; }
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 2px #1d4ed8; }
+    50% { box-shadow: 0 0 0 6px rgba(29, 78, 216, 0.2); }
+}
+
+.timeline-content { padding-left: 4px; }
+.timeline-title { font-size: 13px; font-weight: 600; color: #8899a6; }
+.timeline-item.active .timeline-title { color: #0f1419; }
+.timeline-time { font-size: 12px; color: #536471; margin-top: 2px; }
+.timeline-detail { font-size: 12px; color: #1d4ed8; margin-top: 2px; font-weight: 500; }
 
 @media (max-width: 640px) {
-    .map-modal { width: 95%; }
     .map-container { height: 300px; }
-    .detail-row { flex-direction: column; gap: 8px; }
+    .route-info-row { flex-direction: column; gap: 6px; }
 }
 </style>
