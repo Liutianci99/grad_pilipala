@@ -1,21 +1,31 @@
 # 任务清单
 
-Boss 提需求 → Pilipala 拆解任务 → Boss 审核 → Pilipala 逐个执行。
+## 代码重构 — 匹配 specs 规范
 
-## 格式
+### 后端
 
-```
-## [需求名称]
+- [ ] T001 [P] OrderController: 移除所有 try-catch，参数校验改为抛 BusinessException
+- [ ] T002 [P] DeliveryBatchController: 移除所有 try-catch，业务逻辑抽到 Service 层
+- [ ] T003 [P] AddressController: 移除 System.out.println 调试代码
+- [ ] T004 [P] AuthController: 移除 System.out.println，返回 Result<T> 统一格式
+- [ ] T005 [P] AdminController: 添加 @RequiredArgsConstructor 替换 @Autowired，添加 Swagger 注解
 
-- [ ] T001 [P] 任务描述（涉及文件）
-- [ ] T002 任务描述（依赖 T001）
-- [ ] T003 [P] 任务描述（涉及文件）
-```
+### 前端
 
-- `[P]` = 可并行（不同文件，无依赖）
-- 无标记 = 有依赖，必须按顺序
-- 完成打 `[x]`
+- [ ] T006 [P] admin/OrderManagement: 检查 alert→ElMessage，统一 design.css 类
+- [ ] T007 [P] admin/UserManagement: 检查 alert→ElMessage，统一 design.css 类
+- [ ] T008 [P] delivery/DeliveryBatch: 清理 console.log，统一样式
+- [ ] T009 [P] delivery/DeliveryBatchDetail: 清理 console.log，统一样式
+- [ ] T010 [P] delivery/PendingPickup: 清理 console.log，统一样式
+- [ ] T011 [P] delivery/PendingDelivery: 清理 console.log，统一样式
+- [ ] T012 [P] delivery/HistoryTasks: 清理 console.log，统一样式
+- [ ] T013 [P] merchant/InventoryManagement: 清理 console.log，统一样式
+- [ ] T014 [P] merchant/OrderManagement: 清理 console.log，统一样式
+- [ ] T015 [P] merchant/ProductListing: 清理 console.log，统一样式
+- [ ] T016 [P] merchant/ProductDelisting: 统一样式
+- [ ] T017 [P] merchant/StockIn: 清理 console.log，统一样式
 
----
+### 构建验证
 
-（等待新需求...）
+- [ ] T018 前端 build 验证
+- [ ] T019 提交并推送
