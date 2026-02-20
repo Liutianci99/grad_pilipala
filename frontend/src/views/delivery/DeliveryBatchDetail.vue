@@ -166,10 +166,9 @@ const fetchWarehouseInfo = async (warehouseId) => {
 const fetchBatchOrders = async () => {
     try {
         // 首先尝试从路由状态中获取批次数据
-        const batchData = window.history.state.batchData
+        const batchData = window.history.state?.batchData
 
         if (batchData && batchData.orders && batchData.orders.length > 0) {
-            // 如果有批次数据，直接使用
             orders.value = batchData.orders
             batchInfo.value = {
                 deliveryTime: batchData.startedAt || batchData.createdAt || '未知',
@@ -179,15 +178,16 @@ const fetchBatchOrders = async () => {
             return batchData.orders
         }
 
-        // 如果没有路由状态数据，尝试通过API获取
+        // 如果没有路由状态数据，通过API获取
         const batchId = route.params.batchId || route.query.batchId
+        console.log('路由参数 batchId:', batchId, '| params:', route.params, '| query:', route.query)
+
         if (!batchId) {
             console.error('缺少批次ID参数，返回批次列表')
             router.push('/driver/delivery-batch')
             return []
         }
 
-        // 调用API获取批次列表，然后找到对应的批次
         const deliveryPersonnelId = getCurrentDeliveryPersonnelId()
         if (!deliveryPersonnelId) {
             console.error('无法获取配送员ID')
@@ -199,8 +199,7 @@ const fetchBatchOrders = async () => {
         const response = await request.get(`/orders/delivery-batches-with-status?deliveryPersonnelId=${deliveryPersonnelId}`)
 
         if (response.code === 200 && response.data) {
-            // 找到对应的批次
-            const batch = response.data.find(b => b.batchId === parseInt(batchId))
+            const batch = response.data.find(b => String(b.batchId) === String(batchId))
             if (batch && batch.orders && batch.orders.length > 0) {
                 orders.value = batch.orders
                 batchInfo.value = {
@@ -210,7 +209,7 @@ const fetchBatchOrders = async () => {
                 console.log('通过API获取到批次订单:', batch.orders.length, '个')
                 return batch.orders
             } else {
-                console.error('未找到对应的批次，batchId:', batchId)
+                console.error('未找到对应的批次，batchId:', batchId, '可用批次:', response.data.map(b => b.batchId))
                 router.push('/driver/delivery-batch')
                 return []
             }
@@ -222,7 +221,6 @@ const fetchBatchOrders = async () => {
     } catch (error) {
         console.error('获取批次订单失败:', error)
         return []
-        throw error
     }
 }
 

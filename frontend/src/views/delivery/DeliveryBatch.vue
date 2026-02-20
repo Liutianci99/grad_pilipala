@@ -213,7 +213,7 @@ const viewBatchDetail = (index) => {
             deliveryTime: deliveryTime
         },
         state: {
-            batchData: batch
+            batchData: JSON.parse(JSON.stringify(batch))
         }
     })
 }
