@@ -1,20 +1,15 @@
-# specs/ — 规范驱动开发
+# specs/ — 项目规范
 
-## 流程
-1. Boss 写 `requirements.md` — 需求（WHAT + WHY）
-2. Pilipala 写 `api.md` — 后端接口设计
-3. Pilipala 写 `front_design.md` — 前端页面设计
-4. Boss 审核 → 通过 / 修改
-5. Pilipala 写代码
+## 文件说明
 
-## 目录结构
-```
-specs/
-├── constitution.md              # 项目宪法
-├── 001-功能名/
-│   ├── requirements.md          # Boss 写的需求
-│   ├── api.md                   # 后端接口设计
-│   └── front_design.md          # 前端页面设计
-├── 002-功能名/
-│   └── ...
-```
+| 文件 | 内容 | 谁写 |
+|------|------|------|
+| `constitution.md` | 项目宪法（核心原则、技术栈、约束） | 一起定 |
+| `rule.md` | 编码规范（命名、风格、约定） | Pilipala |
+| `api.md` | 后端接口规范（URL、参数、返回格式） | Pilipala |
+| `frontend_design.md` | 前端设计规范（组件、样式、页面结构） | Pilipala |
+
+## 怎么用
+- 写新功能前，先看这四个文件
+- Boss 提需求 → Pilipala 按规范写代码
+- 规范有变 → 更新对应文件
