@@ -1,17 +1,17 @@
-# specs/ — Spec-Driven Development
+# specs/ — 规范驱动开发
 
-Before building any new feature, write a spec here first.
+每个新功能开发前，先在这里写规范文档。
 
-## Process
-1. Create `specs/feature-name.md`
-2. Boss reviews → approve / tweak
-3. Code against the spec
-4. Verify against acceptance criteria
-5. Move spec to `specs/done/` after merge
+## 流程
+1. 创建 `specs/功能名.md`
+2. Boss 审核 → 通过 / 修改
+3. 按规范写代码
+4. 对照验收标准验证
+5. 合并后移到 `specs/done/`
 
-## What needs a spec
-- New features, new pages, new API endpoints
-- Significant refactors that change behavior
+## 需要写规范的
+- 新功能、新页面、新接口
+- 改变行为的重大重构
 
-## What doesn't need a spec
-- Bug fixes, cleanup, formatting, dependency updates
+## 不需要写规范的
+- Bug修复、代码清理、格式化、依赖更新

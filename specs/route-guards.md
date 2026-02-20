@@ -1,49 +1,47 @@
-# Spec: Route Guards + Role-Based Access Control
+# 规范：路由守卫 + 角色权限控制
 
-## Summary
-Protect all routes so users can only access pages matching their role. Redirect unauthorized access gracefully.
+## 概述
+保护所有路由，用户只能访问自己角色对应的页面。未授权访问自动跳转。
 
-## Current State
-- Router has `meta.requiresAuth` on `/demo` but child routes have no role metadata
-- `beforeEach` guard only checks if token exists — doesn't check role
-- If a consumer manually types `/admin/user-management`, they get in
-- `sessionStorage` stores: `token`, `userInfo` (JSON with id, username, role, token, warehouseId, warehouseName)
+## 现状
+- 路由的 `/demo` 有 `meta.requiresAuth`，但子路由没有角色限制
+- `beforeEach` 守卫只检查 token 是否存在，不检查角色
+- 顾客手动输入 `/admin/user-management` 可以直接进入
+- `sessionStorage` 存储了：`token`、`userInfo`（JSON，含 id、username、role、token、warehouseId、warehouseName）
 
-## Changes
+## 改动
 
-### 1. Route metadata — add `roles` to each child route
+### 1. 路由元信息 — 给每个子路由加 `roles`
 ```js
 { path: '/admin/user-management', component: UserManagement, meta: { roles: ['admin'] } }
 { path: '/general/mall', component: Mall, meta: { roles: ['merchant', 'consumer'] } }
-// etc — match the roles array already defined in demo.vue menuItems
+// 其他路由同理 — 和 demo.vue 里 menuItems 的 roles 数组保持一致
 ```
 
-### 2. Enhanced `beforeEach` guard
+### 2. 增强 `beforeEach` 守卫
 ```
-if route requires auth AND no token → redirect to /
-if route has meta.roles AND user role not in list → redirect to /demo (home)
-if logged in AND visiting / → redirect to /demo
-otherwise → allow
+如果路由需要认证 且 没有 token → 跳转到 /（登录页）
+如果路由有 meta.roles 且 用户角色不在列表中 → 跳转到 /demo（首页）
+如果已登录 且 访问 / → 跳转到 /demo
+否则 → 放行
 ```
 
-### 3. Axios 401 interceptor
-In `request.js` response interceptor, if backend returns 401:
-- Clear sessionStorage
-- Redirect to login via `router.push('/')`
-- Show ElMessage.error('登录已过期，请重新登录')
+### 3. Axios 401 拦截器
+在 `request.js` 响应拦截器中，如果后端返回 401：
+- 清空 sessionStorage
+- 通过 `router.push('/')` 跳转到登录页
+- 显示 ElMessage.error('登录已过期，请重新登录')
 
-### 4. Token expiry handling
-Currently no expiry check on frontend. Add:
-- On 401 response → auto-logout (above)
-- No need for frontend JWT decode — let backend reject expired tokens
+### 4. Token 过期处理
+前端不需要解析 JWT，让后端拒绝过期 token，前端收到 401 自动登出即可。
 
-## Files Changed
-- `frontend/src/router/index.js` — add meta.roles to child routes, enhance beforeEach
-- `frontend/src/utils/request.js` — add 401 interceptor with auto-redirect
+## 涉及文件
+- `frontend/src/router/index.js` — 子路由加 meta.roles，增强 beforeEach
+- `frontend/src/utils/request.js` — 加 401 拦截器，自动跳转登录
 
-## Acceptance Criteria
-- [ ] Unauthenticated user visiting any `/admin/*`, `/merchant/*`, `/consumer/*`, `/driver/*` route → redirected to login
-- [ ] Consumer visiting `/admin/user-management` → redirected to `/demo` (their home)
-- [ ] Admin visiting `/admin/data-analysis` → allowed
-- [ ] 401 from backend → auto-logout + redirect to login + error message
-- [ ] Login page when already logged in → redirect to `/demo`
+## 验收标准
+- [ ] 未登录用户访问 `/admin/*`、`/merchant/*`、`/consumer/*`、`/driver/*` → 跳转到登录页
+- [ ] 顾客访问 `/admin/user-management` → 跳转到 `/demo`（首页）
+- [ ] 管理员访问 `/admin/data-analysis` → 正常进入
+- [ ] 后端返回 401 → 自动登出 + 跳转登录页 + 错误提示
+- [ ] 已登录用户访问登录页 → 跳转到 `/demo`
