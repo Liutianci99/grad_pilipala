@@ -1,98 +1,81 @@
-# 规范：路由守卫 + 角色权限控制
+# 功能规范：路由守卫 + 角色权限控制
 
-## 概述
-保护所有路由，用户只能访问自己角色对应的页面。未授权访问自动跳转。
+**分支**: `feat/route-guards`
+**创建日期**: 2026-02-20
+**状态**: 审核中
 
-## 现状分析
-- 路由 `/demo` 有 `meta.requiresAuth`，但子路由没有角色限制
-- `beforeEach` 守卫只检查 token 是否存在，不检查角色
-- 顾客手动输入 `/admin/user-management` 可以直接进入（安全漏洞）
-- `sessionStorage` 存储：`token`、`userInfo`（JSON，含 id、username、role、token、warehouseId、warehouseName）
+## 用户场景
 
-## 改动详情
+### 用户故事 1 — 未登录用户被拦截（优先级：P1）
 
-### 1. 路由元信息 — 给每个子路由加 `meta.roles`
+未登录的用户尝试直接访问系统内部页面（如通过浏览器地址栏输入 URL），系统应自动跳转到登录页。
 
-```js
-// router/index.js — 子路由示例
-{ path: '/admin/user-management', component: UserManagement, meta: { roles: ['admin'] } },
-{ path: '/admin/order-management', component: AdminOrderManagement, meta: { roles: ['admin'] } },
-{ path: '/admin/data-analysis', component: DataAnalysis, meta: { roles: ['admin'] } },
-{ path: '/merchant/inventory-management', component: InventoryManagement, meta: { roles: ['merchant'] } },
-{ path: '/general/mall', component: Mall, meta: { roles: ['merchant', 'consumer'] } },
-{ path: '/consumer/my-orders', component: MyOrders, meta: { roles: ['consumer'] } },
-{ path: '/driver/pending-pickup', component: PendingPickup, meta: { roles: ['driver'] } },
-// ... 其他路由同理，和 demo.vue 里 menuItems 的 roles 数组保持一致
-```
+**为什么这个优先级**: 这是最基本的安全需求，没有登录就不应该看到任何数据。
 
-### 2. 增强 `beforeEach` 守卫
+**验收场景**:
+1. **当** 用户未登录，**访问** `/admin/user-management`，**则** 自动跳转到登录页 `/`
+2. **当** 用户未登录，**访问** `/consumer/my-orders`，**则** 自动跳转到登录页 `/`
+3. **当** 用户未登录，**访问** `/driver/pending-pickup`，**则** 自动跳转到登录页 `/`
 
-```js
-router.beforeEach((to, from, next) => {
-    const token = sessionStorage.getItem('token')
-    const isLoggedIn = !!token
+---
 
-    // 未登录 → 跳转登录页
-    if (to.meta.requiresAuth !== false && !isLoggedIn) {
-        return next({ name: 'login' })
-    }
+### 用户故事 2 — 角色越权被拦截（优先级：P1）
 
-    // 已登录访问登录页 → 跳转首页
-    if (to.name === 'login' && isLoggedIn) {
-        return next({ name: 'home' })
-    }
+已登录的用户尝试访问不属于自己角色的页面，系统应跳转到首页（不是登录页）。
 
-    // 角色检查
-    if (to.meta.roles && isLoggedIn) {
-        const userInfo = JSON.parse(sessionStorage.getItem('userInfo') || '{}')
-        if (!to.meta.roles.includes(userInfo.role)) {
-            // 无权限 → 跳转首页（不是登录页）
-            return next({ name: 'home' })
-        }
-    }
+**为什么这个优先级**: 防止顾客看到管理员页面、商户看到配送员页面等越权行为。
 
-    next()
-})
-```
+**验收场景**:
+1. **当** 顾客已登录，**访问** `/admin/user-management`，**则** 跳转到 `/demo`（首页）
+2. **当** 商户已登录，**访问** `/consumer/my-orders`，**则** 跳转到 `/demo`
+3. **当** 配送员已登录，**访问** `/admin/data-analysis`，**则** 跳转到 `/demo`
+4. **当** 管理员已登录，**访问** `/admin/data-analysis`，**则** 正常进入
 
-### 3. Axios 401 拦截器
+---
 
-在 `request.js` 响应拦截器中增加 401 处理：
+### 用户故事 3 — Token 过期自动登出（优先级：P2）
 
-```js
-// request.js — 响应拦截器
-import router from '@/router'
+用户在使用过程中 JWT token 过期，后端返回 401，前端应自动清除登录状态并跳转到登录页，显示友好提示。
 
-request.interceptors.response.use(
-    response => response.data,
-    error => {
-        if (error.response?.status === 401) {
-            sessionStorage.clear()
-            ElMessage.error('登录已过期，请重新登录')
-            router.push('/')
-            return Promise.reject(error)
-        }
-        // ... 其他错误处理
-    }
-)
-```
+**为什么这个优先级**: 比越权拦截优先级低，但对用户体验很重要。
 
-### 4. Token 过期处理
-- 前端不解析 JWT，让后端拒绝过期 token
-- 前端收到 401 → 自动清除 session → 跳转登录页
-- 无需前端定时器或 JWT decode 库
+**验收场景**:
+1. **当** 用户正在操作，**后端返回** 401，**则** 清除 sessionStorage + 跳转登录页 + 显示"登录已过期，请重新登录"
+2. **当** 用户已登录，**访问** 登录页 `/`，**则** 自动跳转到 `/demo`
+
+---
+
+### 边界情况
+- sessionStorage 被手动清除后刷新页面 → 应跳转到登录页
+- 用户角色字段为空或无效 → 应跳转到登录页
+- 多个标签页同时打开，一个登出后另一个操作 → 401 拦截处理
+
+## 需求
+
+### 功能需求
+- **FR-001**: 所有 `/demo` 子路由必须携带 `meta.roles` 元信息
+- **FR-002**: `beforeEach` 守卫必须同时检查 token 存在性和角色匹配
+- **FR-003**: Axios 响应拦截器必须处理 401 状态码
+- **FR-004**: 角色列表必须和 `demo.vue` 中 `menuItems` 的 `roles` 数组保持一致
 
 ## 涉及文件
+
 | 文件 | 改动 |
 |------|------|
-| `frontend/src/router/index.js` | 子路由加 `meta.roles`，增强 `beforeEach` |
-| `frontend/src/utils/request.js` | 加 401 拦截器，自动跳转登录 |
+| `frontend/src/router/index.js` | 修改：子路由加 `meta.roles`，增强 `beforeEach` |
+| `frontend/src/utils/request.js` | 修改：加 401 拦截器 |
 
 ## 验收标准
-- [ ] 未登录用户访问 `/admin/*`、`/merchant/*`、`/consumer/*`、`/driver/*` → 跳转到登录页
-- [ ] 顾客访问 `/admin/user-management` → 跳转到 `/demo`（首页），不是登录页
-- [ ] 管理员访问 `/admin/data-analysis` → 正常进入
-- [ ] 商户访问 `/consumer/my-orders` → 跳转到 `/demo`
-- [ ] 后端返回 401 → 自动清除 sessionStorage + 跳转登录页 + ElMessage 错误提示
-- [ ] 已登录用户访问 `/`（登录页）→ 跳转到 `/demo`
-- [ ] 刷新页面后守卫仍然生效（token 从 sessionStorage 读取）
+- [ ] 未登录用户访问任何内部路由 → 跳转登录页
+- [ ] 顾客访问 `/admin/*` → 跳转首页（不是登录页）
+- [ ] 管理员访问 `/admin/*` → 正常进入
+- [ ] 后端返回 401 → 自动登出 + 跳转登录页 + ElMessage 提示
+- [ ] 已登录用户访问登录页 → 跳转首页
+- [ ] 刷新页面后守卫仍然生效
+- [ ] 所有子路由的 `meta.roles` 和侧边栏菜单的 `roles` 一致
+
+## 审核清单
+- [x] 没有 `[待确认]` 标记残留
+- [x] 需求可测试、无歧义
+- [x] 符合项目宪法
+- [x] 验收标准完整
