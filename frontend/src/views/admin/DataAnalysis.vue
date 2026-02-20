@@ -134,7 +134,7 @@ const loadData = async () => {
         ])
         if (overviewRes.code === 200) stats.value = overviewRes.data || {}
         if (dailyRes.code === 200) dailyOrders.value = dailyRes.data || []
-    } catch (e) { console.error(e) }
+    } catch (e) { /* handled */ }
 }
 
 onMounted(loadData)

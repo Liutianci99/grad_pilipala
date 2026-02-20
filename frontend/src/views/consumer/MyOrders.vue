@@ -52,6 +52,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const searchKeyword = ref('')
 const activeSearchKeyword = ref('')
@@ -69,7 +70,7 @@ const getOrders = async () => {
         const res = await request.get('/orders/my', { params })
         if (res.code === 200) orders.value = res.data || []
     } catch (error) {
-        console.error('获取订单列表失败:', error)
+        // handled
     }
 }
 
@@ -77,14 +78,13 @@ const changeStatus = (status) => { currentStatus.value = status; getOrders() }
 const handleSearch = () => { activeSearchKeyword.value = searchKeyword.value; getOrders() }
 
 const confirmReceipt = async (orderId) => {
-    if (!confirm('确认收到商品了吗？')) return
     try {
-        const user = JSON.parse(sessionStorage.getItem('userInfo'))
-        const res = await request.put(`/orders/${orderId}/confirm`, null, { params: { customerId: user.id } })
-        if (res.code === 200) getOrders()
-    } catch (error) {
-        console.error('确认收货失败:', error)
-    }
+        await ElMessageBox.confirm('确认收到商品了吗？', '确认收货', { confirmButtonText: '确认', cancelButtonText: '取消' })
+    } catch { return }
+    const user = JSON.parse(sessionStorage.getItem('userInfo'))
+    const res = await request.put(`/orders/${orderId}/confirm`, null, { params: { customerId: user.id } })
+    if (res.code === 200) { ElMessage.success('确认收货成功'); getOrders() }
+    else ElMessage.error(res.message || '确认收货失败')
 }
 
 const formatTime = (time) => time ? new Date(time).toLocaleString('zh-CN') : ''

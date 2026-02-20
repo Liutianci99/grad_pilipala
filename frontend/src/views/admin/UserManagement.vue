@@ -75,6 +75,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const users = ref([])
 const searchKeyword = ref('')
@@ -92,7 +93,7 @@ const loadUsers = async () => {
         if (searchKeyword.value) params.search = searchKeyword.value
         const res = await request.get('/admin/users', { params })
         if (res.code === 200) users.value = res.data || []
-    } catch (e) { console.error(e) }
+    } catch (e) { /* handled */ }
 }
 
 const changeRole = (role) => { currentRole.value = role; loadUsers() }
@@ -110,32 +111,30 @@ const openEdit = (user) => {
 }
 
 const saveUser = async () => {
-    if (!form.value.username || !form.value.role) return alert('请填写必填项')
-    if (!editingUser.value && !form.value.password) return alert('请输入密码')
+    if (!form.value.username || !form.value.role) { ElMessage.warning('请填写必填项'); return }
+    if (!editingUser.value && !form.value.password) { ElMessage.warning('请输入密码'); return }
 
-    try {
-        const data = { username: form.value.username, role: form.value.role }
-        if (form.value.password) data.password = form.value.password
+    const data = { username: form.value.username, role: form.value.role }
+    if (form.value.password) data.password = form.value.password
 
-        if (editingUser.value) {
-            const res = await request.put(`/admin/users/${editingUser.value.id}`, data)
-            if (res.code !== 200) return alert(res.message || '更新失败')
-        } else {
-            const res = await request.post('/admin/users', data)
-            if (res.code !== 200) return alert(res.message || '创建失败')
-        }
-        showDialog.value = false
-        loadUsers()
-    } catch (e) { console.error(e); alert('操作失败') }
+    if (editingUser.value) {
+        const res = await request.put(`/admin/users/${editingUser.value.id}`, data)
+        if (res.code !== 200) { ElMessage.error(res.message || '更新失败'); return }
+    } else {
+        const res = await request.post('/admin/users', data)
+        if (res.code !== 200) { ElMessage.error(res.message || '创建失败'); return }
+    }
+    showDialog.value = false
+    loadUsers()
 }
 
 const deleteUser = async (user) => {
-    if (!confirm(`确认删除用户 "${user.username}" 吗？`)) return
     try {
-        const res = await request.delete(`/admin/users/${user.id}`)
-        if (res.code === 200) loadUsers()
-        else alert(res.message || '删除失败')
-    } catch (e) { console.error(e); alert('删除失败') }
+        await ElMessageBox.confirm(`确认删除用户 "${user.username}" 吗？`, '确认', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
+    } catch { return }
+    const res = await request.delete(`/admin/users/${user.id}`)
+    if (res.code === 200) { ElMessage.success('删除成功'); loadUsers() }
+    else ElMessage.error(res.message || '删除失败')
 }
 
 onMounted(loadUsers)

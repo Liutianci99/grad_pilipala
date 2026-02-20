@@ -84,6 +84,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import request from '@/utils/request'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const addresses = ref([])
 const searchKeyword = ref('')
@@ -112,7 +113,7 @@ const loadAddresses = async () => {
         const res = await request.get('/address/list')
         if (res.success) addresses.value = res.data || []
     } catch (error) {
-        console.error('加载地址列表失败:', error)
+        // error handled by GlobalExceptionHandler
     }
 }
 
@@ -159,18 +160,17 @@ const submitForm = async () => {
             : await request.post('/address', addressData)
         if (res.success) { closeDialog(); loadAddresses() }
     } catch (error) {
-        console.error('保存地址失败:', error)
+        // error handled by GlobalExceptionHandler
     }
 }
 
 const deleteAddress = async (id) => {
-    if (!confirm('确认删除？')) return
     try {
-        const res = await request.delete(`/address/${id}`)
-        if (res.success) loadAddresses()
-    } catch (error) {
-        console.error('删除地址失败:', error)
-    }
+        await ElMessageBox.confirm('确认删除该地址？', '确认', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
+    } catch { return }
+    const res = await request.delete(`/address/${id}`)
+    if (res.success) { ElMessage.success('删除成功'); loadAddresses() }
+    else ElMessage.error('删除失败')
 }
 
 const setDefaultAddress = async (id) => {
@@ -178,7 +178,7 @@ const setDefaultAddress = async (id) => {
         const res = await request.put(`/address/${id}/default`)
         if (res.success) loadAddresses()
     } catch (error) {
-        console.error('设置默认地址失败:', error)
+        // error handled by GlobalExceptionHandler
     }
 }
 

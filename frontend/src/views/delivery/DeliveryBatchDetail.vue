@@ -78,6 +78,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '@/utils/request'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -119,7 +120,7 @@ const fetchWarehouseInfo = async (id) => {
     try {
         const res = await request.get(`/warehouse/${id}`)
         if (res.success && res.data) { warehouseInfo.value = res.data; return res.data }
-    } catch (e) { console.error('获取仓库信息失败:', e) }
+    } catch (e) { /* handled */ }
     return null
 }
 
@@ -154,13 +155,10 @@ const fetchBatchOrders = async () => {
                 return batch.orders
             }
         }
-        console.error('未找到批次数据, batchId:', batchId.value)
+        
         router.push('/driver/delivery-batch')
         return []
-    } catch (e) {
-        console.error('获取批次订单失败:', e)
-        return []
-    }
+    } catch (e) { return [] }
 }
 
 // ── Map ──
@@ -255,7 +253,7 @@ const fetchRouteByBatch = async () => {
             }
             return true
         }
-    } catch (e) { console.log('暂无路线数据') }
+    } catch (e) { /* handled */ }
     return false
 }
 
@@ -276,7 +274,7 @@ const fetchLocationByBatch = async () => {
                 stopPolling()
             }
         }
-    } catch (e) { console.error('获取位置失败:', e) }
+    } catch (e) { /* handled */ }
 }
 
 const startPolling = () => {
@@ -287,21 +285,23 @@ const stopPolling = () => { if (pollingTimer) { clearInterval(pollingTimer); pol
 
 // ── Complete batch ──
 const handleCompleteBatch = async () => {
-    if (!confirm(`确定完成该批次的配送吗？\n\n包含 ${orders.value.length} 个订单`)) return
+    try {
+        await ElMessageBox.confirm(
+            `确定完成该批次的配送吗？包含 ${orders.value.length} 个订单`,
+            '确认', { confirmButtonText: '确认送达', cancelButtonText: '取消' }
+        )
+    } catch { return }
     completing.value = true
     try {
         const res = await request.post(`/delivery-batch/complete-batch?batchId=${batchId.value}`)
         if (res.code === 200) {
             batchStatus.value = 2
             stopPolling()
-            alert('配送完成！')
+            ElMessage.success('配送完成！')
             router.push('/driver/delivery-batch')
         } else {
-            alert(res.message || '操作失败')
+            ElMessage.error(res.message || '操作失败')
         }
-    } catch (e) {
-        console.error('完成配送失败:', e)
-        alert('完成配送失败')
     } finally { completing.value = false }
 }
 
@@ -330,7 +330,7 @@ onMounted(async () => {
             let n = 0
             const t = setInterval(() => { n++; if (window.TMap) { clearInterval(t); resolve() } else if (n >= 50) { clearInterval(t); reject() } }, 100)
         })
-    } catch { console.error('地图SDK加载失败'); return }
+    } catch { return }
 
     // 3. Warehouse
     const whId = getCurrentUserWarehouseId()
