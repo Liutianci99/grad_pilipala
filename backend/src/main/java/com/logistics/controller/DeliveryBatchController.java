@@ -319,11 +319,35 @@ public class DeliveryBatchController {
             DeliveryRoute route = deliveryRouteService.getByBatchId(batchId);
             if (route != null) {
                 JSONArray polyline = JSON.parseArray(route.getRouteData());
-                resultObj.put("polyline", polyline);
-                resultObj.put("totalDistance", route.getTotalDistance());
-                resultObj.put("totalDuration", route.getTotalDuration());
+                resultObj.put(\"totalDistance\", route.getTotalDistance());
+                resultObj.put(\"totalDuration\", route.getTotalDuration());
 
-                JSONArray pathPoints = tencentMapService.decompressPolyline(route.getRouteData());
+                // Detect format: [{lng,lat,name}] (fake/waypoint) vs [num,num,...] (compressed)
+                boolean isWaypointFormat = !polyline.isEmpty() && polyline.get(0) instanceof com.alibaba.fastjson2.JSONObject;
+
+                JSONArray pathPoints;
+                if (isWaypointFormat) {
+                    // Waypoint objects — convert to [[lat,lng], ...] for consistency
+                    pathPoints = new JSONArray();
+                    JSONArray frontendPolyline = new JSONArray();
+                    for (int i = 0; i < polyline.size(); i++) {
+                        JSONObject wp = polyline.getJSONObject(i);
+                        JSONArray point = new JSONArray();
+                        point.add(wp.getDoubleValue("lat"));
+                        point.add(wp.getDoubleValue("lng"));
+                        pathPoints.add(point);
+                        // Build flat array for frontend map: [lat1,lng1,lat2,lng2,...]
+                        frontendPolyline.add(wp.getDoubleValue("lat"));
+                        frontendPolyline.add(wp.getDoubleValue("lng"));
+                    }
+                    resultObj.put("polyline", frontendPolyline);
+                    resultObj.put("waypoints", polyline);
+                } else {
+                    // Compressed polyline from Tencent Maps API
+                    resultObj.put("polyline", polyline);
+                    pathPoints = tencentMapService.decompressPolyline(route.getRouteData());
+                }
+
                 if (!pathPoints.isEmpty()) {
                     int currentIndex = Math.min(route.getCurrentIndex(), pathPoints.size() - 1);
                     JSONArray currentPoint = pathPoints.getJSONArray(currentIndex);
