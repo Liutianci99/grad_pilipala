@@ -69,7 +69,7 @@ const fetchOrders = async () => {
         ElMessage.error('未获取到配送员信息，请重新登录')
         return
     }
-    const res = await request.get('/orders/pending-delivery', { params: { deliveryPersonnelId: userId } })
+    const res = await request.get('/orders/pending-delivery', { params: { driverId: userId } })
     if (res.success) {
         orders.value = res.data || []
     } else {
@@ -95,7 +95,7 @@ const createBatch = async () => {
         )
     } catch { return }
 
-    const res = await request.post(`/orders/delivery-batch?deliveryPersonnelId=${userId}`, selectedOrders.value)
+    const res = await request.post(`/orders/delivery-batch?driverId=${userId}`, selectedOrders.value)
     if (res.success) {
         ElMessage.success('创建送货批次成功')
         selectedOrders.value = []

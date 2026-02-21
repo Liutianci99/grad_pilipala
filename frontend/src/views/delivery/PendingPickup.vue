@@ -55,7 +55,7 @@ const fetchOrders = async () => {
         ElMessage.error('未获取到配送员信息，请重新登录')
         return
     }
-    const res = await request.get('/orders/pending-pickup', { params: { deliveryPersonnelId: userId } })
+    const res = await request.get('/orders/pending-pickup', { params: { driverId: userId } })
     if (res.success) {
         orders.value = res.data || []
     } else {

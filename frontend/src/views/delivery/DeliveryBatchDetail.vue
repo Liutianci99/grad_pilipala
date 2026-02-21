@@ -142,7 +142,7 @@ const fetchBatchOrders = async () => {
         const uid = JSON.parse(sessionStorage.getItem('userInfo') || '{}').id
         if (!uid) { router.push('/'); return [] }
 
-        const res = await request.get(`/orders/delivery-batches-with-status?deliveryPersonnelId=${uid}`)
+        const res = await request.get(`/orders/delivery-batches-with-status?driverId=${uid}`)
         if (res.code === 200 && res.data) {
             const batch = res.data.find(b => String(b.batchId) === String(batchId.value))
             if (batch?.orders?.length > 0) {

@@ -87,7 +87,7 @@ const router = useRouter()
 const batches = ref([])
 const expandedBatches = ref({})
 
-const getCurrentDeliveryPersonnelId = () => {
+const getCurrentDriverId = () => {
     const userInfoStr = sessionStorage.getItem('userInfo')
     if (userInfoStr) {
         const userInfo = JSON.parse(userInfoStr)
@@ -99,10 +99,10 @@ const getCurrentDeliveryPersonnelId = () => {
 }
 
 const fetchDeliveryBatches = async () => {
-    const deliveryPersonnelId = getCurrentDeliveryPersonnelId()
-    if (!deliveryPersonnelId) return
+    const driverId = getCurrentDriverId()
+    if (!driverId) return
 
-    const response = await request.get(`/orders/delivery-batches-with-status?deliveryPersonnelId=${deliveryPersonnelId}`)
+    const response = await request.get(`/orders/delivery-batches-with-status?driverId=${driverId}`)
     if (response.code === 200 && response.data) {
         batches.value = response.data
         expandedBatches.value = {}
