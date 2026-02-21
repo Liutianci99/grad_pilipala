@@ -10,6 +10,7 @@
 | `backend.md` | 后端规范（数据库、接口、编码） |
 | `frontend.md` | 前端规范（设计、编码、design.css 组件） |
 | `tasks.md` | 任务清单（从需求拆解的可执行任务） |
+| `claude-code.md` | Claude Code 最佳实践（提示技巧、环境配置、上下文管理） |
 
 ## 怎么用
 - 写新功能前，先看这六个文件
