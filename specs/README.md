@@ -4,13 +4,12 @@
 
 | 文件 | 内容 |
 |------|------|
-| `constitution.md` | 项目宪法（核心原则、技术栈、约束） |
+| `constitution.md` | 项目宪法（核心原则、技术栈、约束、提示技巧） |
 | `requirements.md` | 功能需求（按角色划分，每个页面的功能说明） |
-| `rule.md` | Git 规范（分支、提交信息） |
+| `rule.md` | Git 规范 + 代码审查 + 测试规范 |
 | `backend.md` | 后端规范（数据库、接口、编码） |
 | `frontend.md` | 前端规范（设计、编码、design.css 组件） |
 | `tasks.md` | 任务清单（从需求拆解的可执行任务） |
-| `claude-code.md` | Claude Code 最佳实践（提示技巧、环境配置、上下文管理） |
 
 ## 怎么用
 - 写新功能前，先看这六个文件
