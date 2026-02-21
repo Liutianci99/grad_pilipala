@@ -189,7 +189,7 @@ check_status "订单状态 = 2 (已揽收)" "$ORDER_STATUS" "2"
 # ============================================================
 log_step "6. 创建运输批次 — 张伟 (user_id=5)"
 
-BATCH_RESP=$(curl -s -X POST "$BASE_URL/orders/delivery-batch?deliveryPersonnelId=5" \
+BATCH_RESP=$(curl -s -X POST "$BASE_URL/orders/delivery-batch?driverId=5" \
     -H "Authorization: Bearer $DRIVER_TOKEN" \
     -H "Content-Type: application/json" \
     -d "[$ORDER_ID]")
@@ -232,9 +232,9 @@ SELECT CASE
     WHEN route_data LIKE '[{%' THEN 'FAKE'
     WHEN route_data LIKE '[%' AND LENGTH(route_data) > 100 THEN 'REAL'
     ELSE 'UNKNOWN'
-END FROM delivery_route WHERE batch_id=$BATCH_ID;")
+END FROM delivery_batches WHERE id=$BATCH_ID;")
 ROUTE_FORMAT=$(echo "$ROUTE_FORMAT" | tr -d '[:space:]')
-ROUTE_LEN=$(run_sql "SELECT LENGTH(route_data) FROM delivery_route WHERE batch_id=$BATCH_ID;")
+ROUTE_LEN=$(run_sql "SELECT LENGTH(route_data) FROM delivery_batches WHERE id=$BATCH_ID;")
 echo "  Route format: $ROUTE_FORMAT, data length: ${ROUTE_LEN} bytes"
 check_status "路线数据为真实腾讯地图API polyline" "$ROUTE_FORMAT" "REAL"
 
@@ -290,8 +290,7 @@ assert_ok "物流追踪查询成功" "$TRACK_RESP"
 log_step "CLEANUP: 清理测试数据"
 
 run_sql_exec "
-DELETE FROM delivery_location WHERE route_id IN (SELECT id FROM delivery_route WHERE batch_id=$BATCH_ID);
-DELETE FROM delivery_route WHERE batch_id=$BATCH_ID;
+DELETE FROM delivery_location WHERE batch_id=$BATCH_ID;
 DELETE FROM delivery_batch_orders WHERE batch_id=$BATCH_ID;
 DELETE FROM delivery_batches WHERE id=$BATCH_ID;
 DELETE FROM orders WHERE order_id=$ORDER_ID;
