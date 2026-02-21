@@ -521,7 +521,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 查询该配送员的运输批次（status=0 待出发 或 status=1 配送中）
         QueryWrapper<DeliveryBatch> batchQuery = new QueryWrapper<>();
-        batchQuery.eq("driver_id", personnel.getUserId());
+        batchQuery.eq("driver_id", personnel.getId());
         batchQuery.in("status", 0, 1); // 待出发和配送中
         batchQuery.orderByDesc("created_at");
 

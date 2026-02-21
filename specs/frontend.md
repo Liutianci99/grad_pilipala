@@ -1,8 +1,44 @@
-# 前端设计规范
+# 前端规范（设计 + 编码）
 
 ## 设计风格
 
 ElevenLabs × X.com 风格 — 深色侧边栏 + 白色内容区 + 极简调色板 + 圆角药丸元素。
+
+---
+
+## 编码规范
+
+### 组合式 API
+- 必须用 `<script setup>`，不用选项式 API
+- 响应式数据：`ref()`
+- 计算属性：`computed()`
+
+### 导入顺序
+```js
+// 1. Vue
+import { ref, computed, onMounted } from 'vue'
+// 2. 请求
+import request from '@/utils/request'
+// 3. 组件
+// 4. 工具函数和常量
+```
+
+### 请求规范
+- 统一走 `@/utils/request.js`（axios 封装）
+- 自动附加 JWT token
+- 响应格式：`{ code, message, data }`
+- 成功判断：`res.code === 200`
+- 错误提示：`ElMessage`，不用 `alert()`
+
+### 样式规范
+- 全局共享样式：`design.css`（筛选栏、标签、徽章、弹窗、表单等）
+- 页面特有样式：`<style scoped>`
+- 不重复定义 `design.css` 已有的类
+
+### 组件复用
+- 共享组件放 `src/components/`
+- 开发前检查是否已有可用组件
+- 表单用 design.css 的 `.form-group`、`.form-input`、`.form-select`
 
 ---
 
@@ -56,7 +92,7 @@ ElevenLabs × X.com 风格 — 深色侧边栏 + 白色内容区 + 极简调色�
 - 面包屑：支持多级（如 库存管理 / 商品上架）
 - 顶部右侧：角色徽章 + 用户名 + 仓库名（配送员）
 
-### 标准列表页结构
+### 标准列表页
 
 ```html
 <div class="page-container">
@@ -82,7 +118,6 @@ ElevenLabs × X.com 风格 — 深色侧边栏 + 白色内容区 + 极简调色�
             <span class="order-time">{{ item.time }}</span>
             <span class="status-badge status-pending">待确认</span>
         </div>
-        <!-- 内容 -->
     </div>
 
     <!-- 空状态 -->
@@ -92,7 +127,7 @@ ElevenLabs × X.com 风格 — 深色侧边栏 + 白色内容区 + 极简调色�
 </div>
 ```
 
-### 标准表单页结构
+### 标准表单页
 
 ```html
 <div class="page-container">
