@@ -16,39 +16,20 @@ import java.time.LocalDateTime;
 @TableName("delivery_location")
 public class DeliveryLocation {
 
-    /**
-     * 主键ID
-     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 路线ID
-     */
-    private Long routeId;
+    /** 批次ID（FK → delivery_batches.id） */
+    private Integer batchId;
 
-    /**
-     * 纬度
-     */
     private BigDecimal latitude;
-
-    /**
-     * 经度
-     */
     private BigDecimal longitude;
 
-    /**
-     * 地址（通过逆地理编码获取）
-     */
+    /** 地址（通过逆地理编码获取） */
     private String address;
 
-    /**
-     * 路径点索引
-     */
+    /** 路径点索引 */
     private Integer pathIndex;
 
-    /**
-     * 记录时间
-     */
     private LocalDateTime recordedAt;
 }

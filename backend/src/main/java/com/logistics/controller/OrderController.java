@@ -48,9 +48,9 @@ public class OrderController {
     @Operation(summary = "查询待揽收订单")
     @GetMapping("/pending-pickup")
     public Result<List<Order>> listPendingPickupOrders(
-            @Parameter(description = "配送员ID") @RequestParam Long deliveryPersonnelId,
+            @Parameter(description = "配送员ID") @RequestParam Long driverId,
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String search) {
-        List<Order> orders = orderService.getPendingPickupOrders(deliveryPersonnelId, search);
+        List<Order> orders = orderService.getPendingPickupOrders(driverId, search);
         return Result.success(orders);
     }
 
@@ -82,17 +82,17 @@ public class OrderController {
     @Operation(summary = "查询待送货订单")
     @GetMapping("/pending-delivery")
     public Result<List<Order>> listPendingDeliveryOrders(
-            @Parameter(description = "配送员ID") @RequestParam Long deliveryPersonnelId) {
-        List<Order> orders = orderService.getPendingDeliveryOrders(deliveryPersonnelId);
+            @Parameter(description = "配送员ID") @RequestParam Long driverId) {
+        List<Order> orders = orderService.getPendingDeliveryOrders(driverId);
         return Result.success(orders);
     }
 
     @Operation(summary = "创建送货批次")
     @PostMapping("/delivery-batch")
     public Result<com.logistics.dto.CreateBatchResponse> createDeliveryBatch(
-            @Parameter(description = "配送员ID") @RequestParam Long deliveryPersonnelId,
+            @Parameter(description = "配送员ID") @RequestParam Long driverId,
             @Parameter(description = "订单ID列表") @RequestBody List<Integer> orderIds) {
-        var resp = orderService.createDeliveryBatch(deliveryPersonnelId, orderIds);
+        var resp = orderService.createDeliveryBatch(driverId, orderIds);
         return Result.success("创建送货批次成功", resp);
     }
 
@@ -126,9 +126,9 @@ public class OrderController {
     @Operation(summary = "查询运输批次列表")
     @GetMapping("/delivery-batches-with-status")
     public Result<List<com.logistics.dto.DeliveryBatchResponse>> listDeliveryBatchesWithStatus(
-            @Parameter(description = "配送员ID") @RequestParam Long deliveryPersonnelId,
+            @Parameter(description = "配送员ID") @RequestParam Long driverId,
             @Parameter(description = "仓库ID") @RequestParam(required = false) Integer warehouseId) {
-        List<com.logistics.dto.DeliveryBatchResponse> batches = orderService.getDeliveryBatchesWithStatus(deliveryPersonnelId, warehouseId);
+        List<com.logistics.dto.DeliveryBatchResponse> batches = orderService.getDeliveryBatchesWithStatus(driverId, warehouseId);
         return Result.success(batches);
     }
 
@@ -142,7 +142,7 @@ public class OrderController {
     @Operation(summary = "查询历史任务")
     @GetMapping("/completed-batches")
     public Result<List<Order>> listCompletedBatches(
-            @Parameter(description = "配送员ID") @RequestParam Long deliveryPersonnelId,
+            @Parameter(description = "配送员ID") @RequestParam Long driverId,
             @Parameter(description = "开始时间") @RequestParam(required = false) String startTime,
             @Parameter(description = "结束时间") @RequestParam(required = false) String endTime) {
         LocalDateTime startDateTime = null;
@@ -153,14 +153,14 @@ public class OrderController {
         if (endTime != null && !endTime.isEmpty()) {
             endDateTime = LocalDateTime.parse(endTime + "T23:59:59");
         }
-        List<Order> orders = orderService.getCompletedDeliveryBatches(deliveryPersonnelId, startDateTime, endDateTime);
+        List<Order> orders = orderService.getCompletedDeliveryBatches(driverId, startDateTime, endDateTime);
         return Result.success(orders);
     }
 
     @Operation(summary = "查询已完成批次列表")
     @GetMapping("/completed-batches-with-status")
     public Result<List<com.logistics.dto.DeliveryBatchResponse>> listCompletedBatchesWithStatus(
-            @Parameter(description = "配送员ID") @RequestParam Long deliveryPersonnelId,
+            @Parameter(description = "配送员ID") @RequestParam Long driverId,
             @Parameter(description = "开始时间") @RequestParam(required = false) String startTime,
             @Parameter(description = "结束时间") @RequestParam(required = false) String endTime) {
         LocalDateTime startDateTime = null;
@@ -171,7 +171,7 @@ public class OrderController {
         if (endTime != null && !endTime.isEmpty()) {
             endDateTime = LocalDateTime.parse(endTime + "T23:59:59");
         }
-        List<com.logistics.dto.DeliveryBatchResponse> batches = orderService.getCompletedBatchesWithStatus(deliveryPersonnelId, startDateTime, endDateTime);
+        List<com.logistics.dto.DeliveryBatchResponse> batches = orderService.getCompletedBatchesWithStatus(driverId, startDateTime, endDateTime);
         return Result.success(batches);
     }
 }

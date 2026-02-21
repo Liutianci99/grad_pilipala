@@ -8,18 +8,18 @@ import com.logistics.dto.CreateOrderRequest;
 import com.logistics.entity.Address;
 import com.logistics.entity.DeliveryBatch;
 import com.logistics.entity.DeliveryBatchOrder;
-import com.logistics.entity.DeliveryPersonnel;
 import com.logistics.entity.Inventory;
 import com.logistics.entity.Mall;
 import com.logistics.entity.Order;
+import com.logistics.entity.User;
 import com.logistics.entity.Warehouse;
 import com.logistics.mapper.AddressMapper;
 import com.logistics.mapper.DeliveryBatchMapper;
 import com.logistics.mapper.DeliveryBatchOrderMapper;
-import com.logistics.mapper.DeliveryPersonnelMapper;
 import com.logistics.mapper.InventoryMapper;
 import com.logistics.mapper.MallMapper;
 import com.logistics.mapper.OrderMapper;
+import com.logistics.mapper.UserMapper;
 import com.logistics.mapper.WarehouseMapper;
 import com.logistics.service.OrderService;
 import com.logistics.service.TencentMapService;
@@ -33,64 +33,45 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * 订单服务实现类
- */
 @Service
 public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private OrderMapper orderMapper;
-    
     @Autowired
     private MallMapper mallMapper;
-    
     @Autowired
     private InventoryMapper inventoryMapper;
-    
     @Autowired
     private AddressMapper addressMapper;
-    
     @Autowired
-    private DeliveryPersonnelMapper deliveryPersonnelMapper;
-    
+    private UserMapper userMapper;
     @Autowired
     private WarehouseMapper warehouseMapper;
-    
     @Autowired
     private DeliveryBatchMapper deliveryBatchMapper;
-    
     @Autowired
     private DeliveryBatchOrderMapper deliveryBatchOrderMapper;
-
     @Autowired
     private TencentMapService tencentMapService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(CreateOrderRequest request, Integer customerId) {
-        // 1. 校验商品是否存在
         Mall mall = mallMapper.selectById(request.getProductId());
         if (mall == null) {
             throw new RuntimeException("商品不存在");
         }
-        
-        // 2. 校验商品是否已上架
         if (mall.getIsPublished() == null || mall.getIsPublished() != 1) {
             throw new RuntimeException("商品未上架");
         }
-        
-        // 3. 校验库存是否充足
         if (mall.getAvailableQuantity() < request.getQuantity()) {
             throw new RuntimeException("库存不足，当前可用库存：" + mall.getAvailableQuantity());
         }
-        
-        // 4. 校验价格是否一致（防止前端篡改价格）
         if (mall.getPrice().compareTo(request.getPrice()) != 0) {
             throw new RuntimeException("商品价格已变动，请刷新页面");
         }
         
-        // 5. 获取商户ID（从inventory表获取）
         QueryWrapper<Inventory> inventoryQuery = new QueryWrapper<>();
         inventoryQuery.eq("product_id", request.getProductId());
         Inventory inventory = inventoryMapper.selectOne(inventoryQuery);
@@ -99,10 +80,8 @@ public class OrderServiceImpl implements OrderService {
         }
         Integer merchantId = inventory.getUserId();
         
-        // 6. 获取收货地址ID（如果前端没传，则查询用户默认地址）
         Integer addressId = request.getAddressId();
         if (addressId == null) {
-            // 查询用户的默认地址
             QueryWrapper<Address> addressQuery = new QueryWrapper<>();
             addressQuery.eq("user_id", customerId);
             addressQuery.eq("is_default", 1);
@@ -112,10 +91,8 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         
-        // 7. 计算总金额
         BigDecimal totalAmount = mall.getPrice().multiply(new BigDecimal(request.getQuantity()));
         
-        // 8. 创建订单
         Order order = new Order();
         order.setProductId(request.getProductId());
         order.setCustomerId(customerId);
@@ -126,81 +103,41 @@ public class OrderServiceImpl implements OrderService {
         order.setUnitPrice(mall.getPrice());
         order.setTotalAmount(totalAmount);
         order.setImageUrl(mall.getImageUrl());
-        order.setStatus(0); // 待发货
+        order.setStatus(0);
         order.setOrderTime(LocalDateTime.now());
         
-        // 9. 保存订单
         orderMapper.insert(order);
-        
         return order;
     }
     
     @Override
     public List<Order> getCustomerOrders(Integer customerId, Integer status, String search) {
-        QueryWrapper<Order> queryWrapper = new QueryWrapper<>();
-        
-        // 查询该顾客的订单
-        queryWrapper.eq("customer_id", customerId);
-        
-        // 按状态筛选
-        if (status != null) {
-            queryWrapper.eq("status", status);
-        }
-        
-        // 按商品名称搜索
-        if (search != null && !search.trim().isEmpty()) {
-            queryWrapper.like("product_name", search);
-        }
-        
-        // 按下单时间倒序排列
-        queryWrapper.orderByDesc("order_time");
-        
-        return orderMapper.selectList(queryWrapper);
+        QueryWrapper<Order> qw = new QueryWrapper<>();
+        qw.eq("customer_id", customerId);
+        if (status != null) qw.eq("status", status);
+        if (search != null && !search.trim().isEmpty()) qw.like("product_name", search);
+        qw.orderByDesc("order_time");
+        return orderMapper.selectList(qw);
     }
     
     @Override
     public List<Order> getMerchantOrders(Integer merchantId, Integer status, String search) {
-        QueryWrapper<Order> queryWrapper = new QueryWrapper<>();
-        
-        // 查询该商户的订单
-        queryWrapper.eq("merchant_id", merchantId);
-        
-        // 按状态筛选
-        if (status != null) {
-            queryWrapper.eq("status", status);
-        }
-        
-        // 按商品名称搜索
-        if (search != null && !search.trim().isEmpty()) {
-            queryWrapper.like("product_name", search);
-        }
-        
-        // 按下单时间倒序排列
-        queryWrapper.orderByDesc("order_time");
-        
-        return orderMapper.selectList(queryWrapper);
+        QueryWrapper<Order> qw = new QueryWrapper<>();
+        qw.eq("merchant_id", merchantId);
+        if (status != null) qw.eq("status", status);
+        if (search != null && !search.trim().isEmpty()) qw.like("product_name", search);
+        qw.orderByDesc("order_time");
+        return orderMapper.selectList(qw);
     }
     
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void confirmReceipt(Integer orderId, Integer customerId) {
-        // 1. 查询订单是否存在
         Order order = orderMapper.selectById(orderId);
-        if (order == null) {
-            throw new RuntimeException("订单不存在");
-        }
+        if (order == null) throw new RuntimeException("订单不存在");
+        if (!order.getCustomerId().equals(customerId)) throw new RuntimeException("无权操作此订单");
+        if (order.getStatus() != 4) throw new RuntimeException("订单状态不正确，无法确认收货");
         
-        // 2. 验证订单是否属于该顾客
-        if (!order.getCustomerId().equals(customerId)) {
-            throw new RuntimeException("无权操作此订单");
-        }
-        
-        // 3. 验证订单状态（只有已到达状态才能确认收货）
-        if (order.getStatus() != 4) {
-            throw new RuntimeException("订单状态不正确，无法确认收货");
-        }
-        
-        // 4. 更新订单状态为已收货(5)
         order.setStatus(5);
         order.setReceiveTime(LocalDateTime.now());
         orderMapper.updateById(order);
@@ -209,118 +146,77 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void shipOrder(Integer orderId, Integer merchantId) {
-        // 1. 查询订单是否存在
         Order order = orderMapper.selectById(orderId);
-        if (order == null) {
-            throw new RuntimeException("订单不存在");
-        }
+        if (order == null) throw new RuntimeException("订单不存在");
+        if (!order.getMerchantId().equals(merchantId)) throw new RuntimeException("无权操作此订单");
+        if (order.getStatus() != 0) throw new RuntimeException("订单状态不正确，无法发货");
         
-        // 2. 验证订单是否属于该商户
-        if (!order.getMerchantId().equals(merchantId)) {
-            throw new RuntimeException("无权操作此订单");
-        }
-        
-        // 3. 验证订单状态（只有未发货状态才能发货）
-        if (order.getStatus() != 0) {
-            throw new RuntimeException("订单状态不正确，无法发货");
-        }
-        
-        // 4. 更新订单状态为已发货(1)
         order.setStatus(1);
         order.setShipTime(LocalDateTime.now());
         orderMapper.updateById(order);
     }
     
     @Override
-    public List<Order> getPendingPickupOrders(Long deliveryPersonnelId, String search) {
-        // 根据配送员ID获取所属仓库
-        DeliveryPersonnel personnel = deliveryPersonnelMapper.selectOne(
-            new LambdaQueryWrapper<DeliveryPersonnel>().eq(DeliveryPersonnel::getUserId, deliveryPersonnelId)
-        );
-        if (personnel == null || personnel.getWarehouseId() == null) {
+    public List<Order> getPendingPickupOrders(Long driverId, String search) {
+        // 直接从 users 表获取 warehouse_id
+        User driver = userMapper.selectById(driverId);
+        if (driver == null || driver.getWarehouseId() == null) {
             throw new RuntimeException("配送员或仓库信息不存在");
         }
-        return orderMapper.selectPendingPickupOrders(personnel.getWarehouseId(), search);
+        return orderMapper.selectPendingPickupOrders(driver.getWarehouseId(), search);
     }
     
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void confirmPickup(Integer orderId) {
-        // 1. 查询订单是否存在
         Order order = orderMapper.selectById(orderId);
-        if (order == null) {
-            throw new RuntimeException("订单不存在");
-        }
+        if (order == null) throw new RuntimeException("订单不存在");
+        if (order.getStatus() != 1) throw new RuntimeException("订单状态不正确，无法揽收");
         
-        // 2. 验证订单状态（只有已发货状态才能揽收）
-        if (order.getStatus() != 1) {
-            throw new RuntimeException("订单状态不正确，无法揽收");
-        }
-        
-        // 3. 更新订单状态为已揽收(2)
         order.setStatus(2);
         order.setPickupTime(LocalDateTime.now());
         orderMapper.updateById(order);
     }
     
     @Override
-    public List<Order> getPendingDeliveryOrders(Long deliveryPersonnelId) {
-        // 根据配送员ID获取所属仓库
-        DeliveryPersonnel personnel = deliveryPersonnelMapper.selectOne(
-            new LambdaQueryWrapper<DeliveryPersonnel>().eq(DeliveryPersonnel::getUserId, deliveryPersonnelId)
-        );
-        if (personnel == null || personnel.getWarehouseId() == null) {
+    public List<Order> getPendingDeliveryOrders(Long driverId) {
+        User driver = userMapper.selectById(driverId);
+        if (driver == null || driver.getWarehouseId() == null) {
             throw new RuntimeException("配送员或仓库信息不存在");
         }
-        return orderMapper.selectPendingDeliveryOrders(personnel.getWarehouseId());
+        return orderMapper.selectPendingDeliveryOrders(driver.getWarehouseId());
     }
     
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public com.logistics.dto.CreateBatchResponse createDeliveryBatch(Long deliveryPersonnelId, List<Integer> orderIds) {
-        if (deliveryPersonnelId == null) {
-            throw new RuntimeException("配送员ID不能为空");
-        }
-        if (orderIds == null || orderIds.isEmpty()) {
-            throw new RuntimeException("订单列表不能为空");
-        }
-        if (orderIds.size() > 5) {
-            throw new RuntimeException("每个批次最多只能选择5个订单");
-        }
+    public com.logistics.dto.CreateBatchResponse createDeliveryBatch(Long driverId, List<Integer> orderIds) {
+        if (driverId == null) throw new RuntimeException("配送员ID不能为空");
+        if (orderIds == null || orderIds.isEmpty()) throw new RuntimeException("订单列表不能为空");
+        if (orderIds.size() > 5) throw new RuntimeException("每个批次最多只能选择5个订单");
 
-        // 配送员与仓库
-        DeliveryPersonnel personnel = deliveryPersonnelMapper.selectOne(
-            new LambdaQueryWrapper<DeliveryPersonnel>().eq(DeliveryPersonnel::getUserId, deliveryPersonnelId)
-        );
-        if (personnel == null || personnel.getWarehouseId() == null) {
+        // 直接从 users 表获取配送员信息
+        User driver = userMapper.selectById(driverId);
+        if (driver == null || driver.getWarehouseId() == null) {
             throw new RuntimeException("配送员或仓库信息不存在");
         }
-        Warehouse warehouse = warehouseMapper.selectById(personnel.getWarehouseId());
+        Warehouse warehouse = warehouseMapper.selectById(driver.getWarehouseId());
         if (warehouse == null || warehouse.getLongitude() == null || warehouse.getLatitude() == null) {
             throw new RuntimeException("仓库坐标信息不完整");
         }
 
-        // 订单与地址：只使用顾客默认地址
         List<Order> orders = new ArrayList<>();
         List<Address> addresses = new ArrayList<>();
         for (Integer orderId : orderIds) {
             Order order = orderMapper.selectById(orderId);
-            if (order == null) {
-                throw new RuntimeException("订单不存在: " + orderId);
-            }
-            if (order.getStatus() != 2) {
-                throw new RuntimeException("订单状态不正确，只能配送已揽收的订单: " + orderId);
-            }
+            if (order == null) throw new RuntimeException("订单不存在: " + orderId);
+            if (order.getStatus() != 2) throw new RuntimeException("订单状态不正确，只能配送已揽收的订单: " + orderId);
 
-            // 顾客默认地址
             Address addr = addressMapper.selectOne(
                 new LambdaQueryWrapper<Address>()
                     .eq(Address::getUserId, order.getCustomerId().longValue())
                     .eq(Address::getIsDefault, 1)
             );
-            if (addr == null) {
-                throw new RuntimeException("顾客未设置默认收货地址: " + orderId);
-            }
+            if (addr == null) throw new RuntimeException("顾客未设置默认收货地址: " + orderId);
             if (addr.getLongitude() == null || addr.getLatitude() == null) {
                 throw new RuntimeException("默认收货地址缺少坐标信息: " + orderId);
             }
@@ -329,8 +225,7 @@ public class OrderServiceImpl implements OrderService {
             addresses.add(addr);
         }
 
-        // 调用腾讯地图API计算路线距离和时长
-        // 腾讯地图坐标格式: lat,lng
+        // 调用腾讯地图API
         String origin = warehouse.getLatitude().toPlainString() + "," + warehouse.getLongitude().toPlainString();
         String destination;
         String waypoints = null;
@@ -361,32 +256,25 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
-        // 保存批次
+        // 保存批次 — driver_id 直接用 users.id
         DeliveryBatch batch = new DeliveryBatch();
-        batch.setDriverId(personnel.getUserId());
+        batch.setDriverId(driverId.intValue());
         batch.setWarehouseId(warehouse.getId());
         batch.setStatus(0);
         batch.setCreatedAt(LocalDateTime.now());
         batch.setTotalDistance(totalDistance);
         batch.setTotalDuration(totalDuration);
+        batch.setCurrentIndex(0);
         deliveryBatchMapper.insert(batch);
 
-        // 计算停靠顺序（按地址列表顺序）
-        List<Integer> stopOrder = new ArrayList<>();
-        for (int i = 0; i < addresses.size(); i++) stopOrder.add(i);
-
         // 保存批次-订单关联
-        for (int seq = 0; seq < stopOrder.size(); seq++) {
-            int addrIdx = stopOrder.get(seq);
-            Order o = orders.get(addrIdx);
+        for (int seq = 0; seq < orders.size(); seq++) {
             DeliveryBatchOrder bo = new DeliveryBatchOrder();
             bo.setBatchId(batch.getId());
-            bo.setOrderId(o.getOrderId());
+            bo.setOrderId(orders.get(seq).getOrderId());
             bo.setStopSequence(seq + 1);
             deliveryBatchOrderMapper.insert(bo);
         }
-
-        // 订单状态保持为已揽收(2)，等开始运输时再更新为运输中(3)
 
         // 构建响应
         com.logistics.dto.CreateBatchResponse resp = new com.logistics.dto.CreateBatchResponse();
@@ -394,11 +282,8 @@ public class OrderServiceImpl implements OrderService {
         resp.setTotalDistance(totalDistance);
         resp.setTotalDuration(totalDuration);
         resp.setOrderCount(orders.size());
-        // 将停靠顺序映射为订单ID序列
-        java.util.List<Integer> stopOrderByOrderId = new java.util.ArrayList<>();
-        for (int idx : stopOrder) {
-            stopOrderByOrderId.add(orders.get(idx).getOrderId());
-        }
+        List<Integer> stopOrderByOrderId = orders.stream()
+            .map(Order::getOrderId).collect(Collectors.toList());
         resp.setStopOrder(stopOrderByOrderId);
         return resp;
     }
@@ -406,30 +291,22 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<Order> getDeliveryBatchOrders(Integer warehouseId) {
         List<Order> orders = orderMapper.selectDeliveryBatchOrders(warehouseId);
-
-        // 为每个订单加载Address信息
         for (Order order : orders) {
             if (order.getAddressId() != null) {
-                Address address = addressMapper.selectById(order.getAddressId());
-                order.setAddress(address);
+                order.setAddress(addressMapper.selectById(order.getAddressId()));
             }
         }
-
         return orders;
     }
 
     @Override
     public List<Order> getDeliveryBatchOrders(LocalDateTime deliveryTime, Integer warehouseId) {
         List<Order> orders = orderMapper.selectDeliveryBatchOrdersByTimeAndWarehouse(deliveryTime, warehouseId);
-
-        // 为每个订单加载Address信息
         for (Order order : orders) {
             if (order.getAddressId() != null) {
-                Address address = addressMapper.selectById(order.getAddressId());
-                order.setAddress(address);
+                order.setAddress(addressMapper.selectById(order.getAddressId()));
             }
         }
-
         return orders;
     }
 
@@ -448,209 +325,114 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void completeDelivery(List<Integer> orderIds) {
-        if (orderIds == null || orderIds.isEmpty()) {
-            throw new RuntimeException("订单列表不能为空");
-        }
-        
-        // 批量更新订单状态
+        if (orderIds == null || orderIds.isEmpty()) throw new RuntimeException("订单列表不能为空");
         for (Integer orderId : orderIds) {
             Order order = orderMapper.selectById(orderId);
-            if (order == null) {
-                throw new RuntimeException("订单不存在: " + orderId);
-            }
-            
-            // 验证订单状态（只有运输中的订单才能完成送货）
-            if (order.getStatus() != 3) {
-                throw new RuntimeException("订单状态不正确，无法完成送货: " + orderId);
-            }
-            
-            // 更新订单状态为已到达(4)
+            if (order == null) throw new RuntimeException("订单不存在: " + orderId);
+            if (order.getStatus() != 3) throw new RuntimeException("订单状态不正确，无法完成送货: " + orderId);
             order.setStatus(4);
             orderMapper.updateById(order);
         }
     }
 
     @Override
-    public List<Order> getCompletedDeliveryBatches(Long deliveryPersonnelId, LocalDateTime startTime, LocalDateTime endTime) {
-        // 获取配送员所属仓库
-        DeliveryPersonnel personnel = deliveryPersonnelMapper.selectOne(
-            new LambdaQueryWrapper<DeliveryPersonnel>().eq(DeliveryPersonnel::getUserId, deliveryPersonnelId)
-        );
-        if (personnel == null || personnel.getWarehouseId() == null) {
+    public List<Order> getCompletedDeliveryBatches(Long driverId, LocalDateTime startTime, LocalDateTime endTime) {
+        User driver = userMapper.selectById(driverId);
+        if (driver == null || driver.getWarehouseId() == null) {
             throw new RuntimeException("配送员或仓库信息不存在");
         }
 
-        // 查询已完成的订单（status=4 已到达）
-        QueryWrapper<Order> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("warehouse_id", personnel.getWarehouseId());
-        queryWrapper.eq("status", 4); // 已到达状态
+        QueryWrapper<Order> qw = new QueryWrapper<>();
+        qw.eq("warehouse_id", driver.getWarehouseId());
+        qw.eq("status", 4);
+        if (startTime != null) qw.ge("delivery_time", startTime);
+        if (endTime != null) qw.le("delivery_time", endTime);
+        qw.orderByDesc("delivery_time");
 
-        // 如果有时间范围，添加时间筛选
-        if (startTime != null) {
-            queryWrapper.ge("delivery_time", startTime);
-        }
-        if (endTime != null) {
-            queryWrapper.le("delivery_time", endTime);
-        }
-
-        // 按delivery_time倒序排列
-        queryWrapper.orderByDesc("delivery_time");
-
-        List<Order> orders = orderMapper.selectList(queryWrapper);
-
-        // 为每个订单加载Address信息
+        List<Order> orders = orderMapper.selectList(qw);
         for (Order order : orders) {
             if (order.getAddressId() != null) {
-                Address address = addressMapper.selectById(order.getAddressId());
-                order.setAddress(address);
+                order.setAddress(addressMapper.selectById(order.getAddressId()));
             }
         }
-
         return orders;
     }
 
     @Override
-    public List<com.logistics.dto.DeliveryBatchResponse> getDeliveryBatchesWithStatus(Long deliveryPersonnelId, Integer warehouseId) {
-        // 获取配送员所属仓库
-        DeliveryPersonnel personnel = deliveryPersonnelMapper.selectOne(
-            new LambdaQueryWrapper<DeliveryPersonnel>().eq(DeliveryPersonnel::getUserId, deliveryPersonnelId)
-        );
-        if (personnel == null || personnel.getWarehouseId() == null) {
-            throw new RuntimeException("配送员或仓库信息不存在");
-        }
-
-        // 查询该配送员的运输批次（status=0 待出发 或 status=1 配送中）
+    public List<com.logistics.dto.DeliveryBatchResponse> getDeliveryBatchesWithStatus(Long driverId, Integer warehouseId) {
+        // driver_id 现在直接是 users.id
         QueryWrapper<DeliveryBatch> batchQuery = new QueryWrapper<>();
-        batchQuery.eq("driver_id", personnel.getId());
-        batchQuery.in("status", 0, 1); // 待出发和配送中
+        batchQuery.eq("driver_id", driverId);
+        batchQuery.in("status", 0, 1);
         batchQuery.orderByDesc("created_at");
 
         List<DeliveryBatch> batches = deliveryBatchMapper.selectList(batchQuery);
-
-        // 构建响应列表
-        List<com.logistics.dto.DeliveryBatchResponse> responseList = new ArrayList<>();
-
-        for (DeliveryBatch batch : batches) {
-            com.logistics.dto.DeliveryBatchResponse response = new com.logistics.dto.DeliveryBatchResponse();
-            response.setBatchId(batch.getId());
-            response.setStatus(batch.getStatus());
-            response.setCreatedAt(batch.getCreatedAt());
-            response.setStartedAt(batch.getStartedAt());
-            response.setCompletedAt(batch.getCompletedAt());
-            response.setTotalDistance(batch.getTotalDistance());
-            response.setTotalDuration(batch.getTotalDuration());
-
-            // 查询该批次的订单
-            QueryWrapper<DeliveryBatchOrder> orderQuery = new QueryWrapper<>();
-            orderQuery.eq("batch_id", batch.getId());
-            orderQuery.orderByAsc("stop_sequence");
-
-            List<DeliveryBatchOrder> batchOrders = deliveryBatchOrderMapper.selectList(orderQuery);
-            List<Order> orders = new ArrayList<>();
-
-            for (DeliveryBatchOrder batchOrder : batchOrders) {
-                Order order = orderMapper.selectOrderWithDetails(batchOrder.getOrderId());
-                if (order != null) {
-                    // 加载地址信息
-                    if (order.getAddressId() != null) {
-                        Address address = addressMapper.selectById(order.getAddressId());
-                        order.setAddress(address);
-                    }
-                    orders.add(order);
-                }
-            }
-
-            response.setOrders(orders);
-            responseList.add(response);
-        }
-
-        return responseList;
+        return buildBatchResponses(batches);
     }
 
     @Override
-    public List<com.logistics.dto.DeliveryBatchResponse> getCompletedBatchesWithStatus(Long deliveryPersonnelId, LocalDateTime startTime, LocalDateTime endTime) {
-        // 获取配送员所属仓库
-        DeliveryPersonnel personnel = deliveryPersonnelMapper.selectOne(
-            new LambdaQueryWrapper<DeliveryPersonnel>().eq(DeliveryPersonnel::getUserId, deliveryPersonnelId)
-        );
-        if (personnel == null || personnel.getWarehouseId() == null) {
-            throw new RuntimeException("配送员或仓库信息不存在");
-        }
-
-        // 查询该配送员的已完成批次（status=2 已完成）
+    public List<com.logistics.dto.DeliveryBatchResponse> getCompletedBatchesWithStatus(Long driverId, LocalDateTime startTime, LocalDateTime endTime) {
         QueryWrapper<DeliveryBatch> batchQuery = new QueryWrapper<>();
-        batchQuery.eq("driver_id", personnel.getUserId());
-        batchQuery.eq("status", 2); // 已完成
-
-        // 如果有时间范围，添加时间筛选
-        if (startTime != null) {
-            batchQuery.ge("completed_at", startTime);
-        }
-        if (endTime != null) {
-            batchQuery.le("completed_at", endTime);
-        }
-
+        batchQuery.eq("driver_id", driverId);
+        batchQuery.eq("status", 2);
+        if (startTime != null) batchQuery.ge("completed_at", startTime);
+        if (endTime != null) batchQuery.le("completed_at", endTime);
         batchQuery.orderByDesc("completed_at");
 
         List<DeliveryBatch> batches = deliveryBatchMapper.selectList(batchQuery);
-
-        // 构建响应列表
-        List<com.logistics.dto.DeliveryBatchResponse> responseList = new ArrayList<>();
-
-        for (DeliveryBatch batch : batches) {
-            com.logistics.dto.DeliveryBatchResponse response = new com.logistics.dto.DeliveryBatchResponse();
-            response.setBatchId(batch.getId());
-            response.setStatus(batch.getStatus());
-            response.setCreatedAt(batch.getCreatedAt());
-            response.setStartedAt(batch.getStartedAt());
-            response.setCompletedAt(batch.getCompletedAt());
-            response.setTotalDistance(batch.getTotalDistance());
-            response.setTotalDuration(batch.getTotalDuration());
-
-            // 查询该批次的订单
-            QueryWrapper<DeliveryBatchOrder> orderQuery = new QueryWrapper<>();
-            orderQuery.eq("batch_id", batch.getId());
-            orderQuery.orderByAsc("stop_sequence");
-
-            List<DeliveryBatchOrder> batchOrders = deliveryBatchOrderMapper.selectList(orderQuery);
-            List<Order> orders = new ArrayList<>();
-
-            for (DeliveryBatchOrder batchOrder : batchOrders) {
-                Order order = orderMapper.selectOrderWithDetails(batchOrder.getOrderId());
-                if (order != null) {
-                    // 加载地址信息
-                    if (order.getAddressId() != null) {
-                        Address address = addressMapper.selectById(order.getAddressId());
-                        order.setAddress(address);
-                    }
-                    orders.add(order);
-                }
-            }
-
-            response.setOrders(orders);
-            responseList.add(response);
-        }
-
-        return responseList;
+        return buildBatchResponses(batches);
     }
 
     @Override
     public List<Order> getOrdersByBatchId(Integer batchId) {
-        QueryWrapper<DeliveryBatchOrder> batchOrderQuery = new QueryWrapper<>();
-        batchOrderQuery.eq("batch_id", batchId).orderByAsc("stop_sequence");
-        List<DeliveryBatchOrder> batchOrders = deliveryBatchOrderMapper.selectList(batchOrderQuery);
+        QueryWrapper<DeliveryBatchOrder> qw = new QueryWrapper<>();
+        qw.eq("batch_id", batchId).orderByAsc("stop_sequence");
+        List<DeliveryBatchOrder> batchOrders = deliveryBatchOrderMapper.selectList(qw);
 
         List<Order> orders = new ArrayList<>();
-        for (DeliveryBatchOrder batchOrder : batchOrders) {
-            Order order = orderMapper.selectOrderWithDetails(batchOrder.getOrderId());
+        for (DeliveryBatchOrder bo : batchOrders) {
+            Order order = orderMapper.selectOrderWithDetails(bo.getOrderId());
             if (order != null) {
                 if (order.getAddressId() != null) {
-                    Address address = addressMapper.selectById(order.getAddressId());
-                    order.setAddress(address);
+                    order.setAddress(addressMapper.selectById(order.getAddressId()));
                 }
                 orders.add(order);
             }
         }
         return orders;
+    }
+
+    // ── Private helper ──
+
+    private List<com.logistics.dto.DeliveryBatchResponse> buildBatchResponses(List<DeliveryBatch> batches) {
+        List<com.logistics.dto.DeliveryBatchResponse> responseList = new ArrayList<>();
+        for (DeliveryBatch batch : batches) {
+            com.logistics.dto.DeliveryBatchResponse response = new com.logistics.dto.DeliveryBatchResponse();
+            response.setBatchId(batch.getId());
+            response.setStatus(batch.getStatus());
+            response.setCreatedAt(batch.getCreatedAt());
+            response.setStartedAt(batch.getStartedAt());
+            response.setCompletedAt(batch.getCompletedAt());
+            response.setTotalDistance(batch.getTotalDistance());
+            response.setTotalDuration(batch.getTotalDuration());
+
+            QueryWrapper<DeliveryBatchOrder> orderQuery = new QueryWrapper<>();
+            orderQuery.eq("batch_id", batch.getId()).orderByAsc("stop_sequence");
+            List<DeliveryBatchOrder> batchOrders = deliveryBatchOrderMapper.selectList(orderQuery);
+
+            List<Order> orders = new ArrayList<>();
+            for (DeliveryBatchOrder bo : batchOrders) {
+                Order order = orderMapper.selectOrderWithDetails(bo.getOrderId());
+                if (order != null) {
+                    if (order.getAddressId() != null) {
+                        order.setAddress(addressMapper.selectById(order.getAddressId()));
+                    }
+                    orders.add(order);
+                }
+            }
+            response.setOrders(orders);
+            responseList.add(response);
+        }
+        return responseList;
     }
 }

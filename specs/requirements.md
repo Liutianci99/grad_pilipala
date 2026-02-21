@@ -58,7 +58,7 @@
 #### 配送员流程
 1. 揽收：查看所属仓库的已发货订单(status=1)，执行揽收 → `orders.status = 2`，记录 `pickup_time`
 2. 创建批次：选择多个已揽收订单(status=2)，组成一个配送批次 → 创建 `delivery_batches`(status=0) + `delivery_batch_orders`
-3. 开始运输：点击"开始运输" → `delivery_batches.status = 1`，系统调用地图API规划路线 → 创建 `delivery_route`，批次内所有订单 `status = 3`
+3. 开始运输：点击"开始运输" → `delivery_batches.status = 1`，系统调用地图API规划路线 → 路线数据存入 `delivery_batches.route_data`，批次内所有订单 `status = 3`
 4. 配送中：系统记录实时GPS位置到 `delivery_location`，前端地图展示货车移动轨迹
 5. 送达：到达目的地后，订单 `status = 4`，记录 `delivery_time`
 6. 完成批次：所有订单送达后，确认完成 → `delivery_batches.status = 2`
@@ -74,13 +74,12 @@
 users ──┬── inventory (user_id = 商户)
         ├── mall (merchant_id = 商户)
         ├── orders (customer_id = 消费者, merchant_id = 商户)
-        ├── delivery_personnel (user_id = 配送员) ── warehouse
-        └── address (user_id = 消费者)
+        ├── address (user_id = 消费者)
+        └── delivery_batches (driver_id = 配送员用户ID)
+                ├── delivery_batch_orders ── orders
+                └── delivery_location (GPS轨迹)
 
-delivery_batches (driver_id = 配送员)
-    ├── delivery_batch_orders ── orders
-    └── delivery_route
-            └── delivery_location (GPS轨迹)
+warehouse ── users.warehouse_id (配送员所属仓库)
 ```
 
 ---

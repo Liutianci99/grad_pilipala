@@ -12,5 +12,6 @@ public class User {
     private Long id;
     private String username;
     private String password; // BCrypt加密存储
-    private String role;     // merchant / driver / consumer
+    private String role;     // merchant / driver / consumer / admin
+    private Integer warehouseId; // 配送员所属仓库（仅driver有值）
 }
