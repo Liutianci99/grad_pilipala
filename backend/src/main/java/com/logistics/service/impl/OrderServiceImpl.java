@@ -211,6 +211,14 @@ public class OrderServiceImpl implements OrderService {
             if (order == null) throw new RuntimeException("订单不存在: " + orderId);
             if (order.getStatus() != 2) throw new RuntimeException("订单状态不正确，只能配送已揽收的订单: " + orderId);
 
+            // 检查订单是否已在活跃批次中
+            Long existingCount = deliveryBatchOrderMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DeliveryBatchOrder>()
+                    .eq("order_id", orderId)
+                    .inSql("batch_id", "SELECT id FROM delivery_batches WHERE status IN (0, 1)")
+            );
+            if (existingCount > 0) throw new RuntimeException("订单已在活跃批次中: " + orderId);
+
             Address addr = addressMapper.selectOne(
                 new LambdaQueryWrapper<Address>()
                     .eq(Address::getUserId, order.getCustomerId().longValue())

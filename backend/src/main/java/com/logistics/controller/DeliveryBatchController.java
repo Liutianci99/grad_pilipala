@@ -158,9 +158,10 @@ public class DeliveryBatchController {
     @Operation(summary = "订单物流追踪")
     @GetMapping("/track-by-order")
     public Result<?> trackByOrder(@Parameter(description = "订单ID") @RequestParam Integer orderId) {
+        // 获取最新的批次关联（一个订单可能被重新分配过批次）
         com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DeliveryBatchOrder> qw =
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-        qw.eq("order_id", orderId);
+        qw.eq("order_id", orderId).orderByDesc("batch_id").last("LIMIT 1");
         DeliveryBatchOrder dbo = deliveryBatchOrderMapper.selectOne(qw);
 
         if (dbo == null) throw new BusinessException("该订单暂无物流信息");
