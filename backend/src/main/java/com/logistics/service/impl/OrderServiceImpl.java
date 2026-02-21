@@ -371,16 +371,9 @@ public class OrderServiceImpl implements OrderService {
         batch.setTotalDuration(totalDuration);
         deliveryBatchMapper.insert(batch);
 
-        // 计算停靠顺序
+        // 计算停靠顺序（按地址列表顺序）
         List<Integer> stopOrder = new ArrayList<>();
-        if (path.getWaypointOrder() != null && !path.getWaypointOrder().isEmpty()) {
-            for (String idx : path.getWaypointOrder().split(",")) {
-                stopOrder.add(Integer.parseInt(idx.trim()));
-            }
-            stopOrder.add(addresses.size() - 1);
-        } else {
-            for (int i = 0; i < addresses.size(); i++) stopOrder.add(i);
-        }
+        for (int i = 0; i < addresses.size(); i++) stopOrder.add(i);
 
         // 保存批次-订单关联
         for (int seq = 0; seq < stopOrder.size(); seq++) {
