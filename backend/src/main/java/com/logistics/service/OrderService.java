@@ -100,6 +100,12 @@ public interface OrderService {
     void completeDelivery(List<Integer> orderIds);
 
     /**
+     * 批量更新订单状态为运输中(3)
+     * @param orders 订单列表
+     */
+    void updateOrdersToInTransit(List<Order> orders);
+
+    /**
      * 获取已完成的运输批次（历史任务）
      * @param deliveryPersonnelId 配送员ID
      * @param startTime 开始时间（可选）

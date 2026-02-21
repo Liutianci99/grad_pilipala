@@ -202,8 +202,8 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("无权操作此订单");
         }
         
-        // 3. 验证订单状态（只有待收货状态才能确认收货）
-        if (order.getStatus() != 2) {
+        // 3. 验证订单状态（只有已到达状态才能确认收货）
+        if (order.getStatus() != 4) {
             throw new RuntimeException("订单状态不正确，无法确认收货");
         }
         
@@ -427,12 +427,7 @@ public class OrderServiceImpl implements OrderService {
             deliveryBatchOrderMapper.insert(bo);
         }
 
-        // 更新订单状态为运输中
-        for (Order o : orders) {
-            o.setStatus(3);
-            o.setDeliveryTime(LocalDateTime.now());
-            orderMapper.updateById(o);
-        }
+        // 订单状态保持为已揽收(2)，等开始运输时再更新为运输中(3)
 
         // 构建响应
         com.logistics.dto.CreateBatchResponse resp = new com.logistics.dto.CreateBatchResponse();
@@ -477,6 +472,18 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return orders;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateOrdersToInTransit(List<Order> orders) {
+        for (Order order : orders) {
+            if (order.getStatus() == 2) {
+                order.setStatus(3);
+                order.setDeliveryTime(LocalDateTime.now());
+                orderMapper.updateById(order);
+            }
+        }
     }
 
     @Override

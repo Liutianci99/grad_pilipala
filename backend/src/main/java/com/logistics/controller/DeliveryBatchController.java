@@ -74,6 +74,9 @@ public class DeliveryBatchController {
         }
 
         List<Order> orders = orderService.getOrdersByBatchId(batchId);
+        // 更新批次内所有订单状态为运输中(3)
+        orderService.updateOrdersToInTransit(orders);
+
         if (orders.isEmpty()) {
             log.info("批次 {} 已开始运输（无订单，跳过路线规划）", batchId);
             return Result.success("开始运输成功", null);
