@@ -2,8 +2,8 @@ package com.logistics.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.logistics.dto.AmapRouteResponse;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.logistics.dto.CreateOrderRequest;
 import com.logistics.entity.Address;
 import com.logistics.entity.DeliveryBatch;
@@ -22,11 +22,10 @@ import com.logistics.mapper.MallMapper;
 import com.logistics.mapper.OrderMapper;
 import com.logistics.mapper.WarehouseMapper;
 import com.logistics.service.OrderService;
+import com.logistics.service.TencentMapService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -63,16 +62,10 @@ public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private DeliveryBatchOrderMapper deliveryBatchOrderMapper;
-    
+
     @Autowired
-    private RestTemplate restTemplate;
-    
-    @Value("${amap.key}")
-    private String amapKey;
-    
-    @Value("${amap.direction-api-url}")
-    private String amapDirectionApiUrl;
-    
+    private TencentMapService tencentMapService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Order createOrder(CreateOrderRequest request, Integer customerId) {
@@ -336,71 +329,44 @@ public class OrderServiceImpl implements OrderService {
             addresses.add(addr);
         }
 
-        // 构建高德API请求参数
-        String origin = warehouse.getLongitude().toPlainString() + "," + warehouse.getLatitude().toPlainString();
+        // 调用腾讯地图API计算路线距离和时长
+        // 腾讯地图坐标格式: lat,lng
+        String origin = warehouse.getLatitude().toPlainString() + "," + warehouse.getLongitude().toPlainString();
         String destination;
         String waypoints = null;
         if (addresses.size() == 1) {
             Address dest = addresses.get(0);
-            destination = dest.getLongitude().toPlainString() + "," + dest.getLatitude().toPlainString();
+            destination = dest.getLatitude().toPlainString() + "," + dest.getLongitude().toPlainString();
         } else {
             Address dest = addresses.get(addresses.size() - 1);
-            destination = dest.getLongitude().toPlainString() + "," + dest.getLatitude().toPlainString();
+            destination = dest.getLatitude().toPlainString() + "," + dest.getLongitude().toPlainString();
             waypoints = addresses.subList(0, addresses.size() - 1).stream()
-                .map(a -> a.getLongitude().toPlainString() + "," + a.getLatitude().toPlainString())
+                .map(a -> a.getLatitude().toPlainString() + "," + a.getLongitude().toPlainString())
                 .collect(Collectors.joining(";"));
         }
 
-        String apiUrl = String.format("%s?key=%s&origin=%s&destination=%s&strategy=0",
-            amapDirectionApiUrl, amapKey, origin, destination);
-        if (waypoints != null && !waypoints.isEmpty()) {
-            apiUrl += "&waypoints=" + waypoints;
-        }
+        JSONObject routeResponse = tencentMapService.planRoute(origin, destination, waypoints);
+        Integer totalDistance = null;
+        Integer totalDuration = null;
 
-        // 先用 String 接收原始响应，便于调试
-        String rawResponse;
-        try {
-            rawResponse = restTemplate.getForObject(apiUrl, String.class);
-            System.out.println("高德API原始响应: " + rawResponse);
-        } catch (Exception e) {
-            System.err.println("高德API调用失败: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("调用高德路径规划API失败: " + e.getMessage());
+        if (routeResponse != null) {
+            JSONObject result = routeResponse.getJSONObject("result");
+            if (result != null) {
+                JSONArray routes = result.getJSONArray("routes");
+                if (routes != null && !routes.isEmpty()) {
+                    JSONObject route = routes.getJSONObject(0);
+                    totalDistance = route.getInteger("distance");
+                    totalDuration = route.getInteger("duration");
+                }
+            }
         }
-
-        // 将 JSON 字符串反序列化为 DTO
-        AmapRouteResponse routeResp;
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            routeResp = mapper.readValue(rawResponse, AmapRouteResponse.class);
-        } catch (Exception e) {
-            System.err.println("高德API响应解析失败: " + e.getMessage());
-            System.err.println("原始响应: " + rawResponse);
-            e.printStackTrace();
-            throw new RuntimeException("解析高德API响应失败: " + e.getMessage());
-        }
-        
-        if (routeResp == null || !"1".equals(routeResp.getStatus()) || routeResp.getRoute() == null ||
-            routeResp.getRoute().getPaths() == null || routeResp.getRoute().getPaths().isEmpty()) {
-            String errMsg = routeResp != null ? "状态: " + routeResp.getStatus() + ", 信息: " + routeResp.getInfo() : "响应为null";
-            throw new RuntimeException("高德API返回错误: " + errMsg);
-        }
-
-        AmapRouteResponse.Path path = routeResp.getRoute().getPaths().get(0);
-        Integer totalDistance = path.getDistance() != null ? Integer.parseInt(path.getDistance()) : null;
-        Integer totalDuration = path.getDuration() != null ? Integer.parseInt(path.getDuration()) : null;
-        String routePolyline = path.getSteps() != null ? path.getSteps().stream()
-            .map(AmapRouteResponse.Step::getPolyline)
-            .filter(p -> p != null && !p.isEmpty())
-            .collect(Collectors.joining(";")) : "";
 
         // 保存批次
         DeliveryBatch batch = new DeliveryBatch();
-        batch.setDriverId(personnel.getId());
+        batch.setDriverId(personnel.getUserId());
         batch.setWarehouseId(warehouse.getId());
         batch.setStatus(0);
         batch.setCreatedAt(LocalDateTime.now());
-        batch.setRoutePolyline(routePolyline);
         batch.setTotalDistance(totalDistance);
         batch.setTotalDuration(totalDuration);
         deliveryBatchMapper.insert(batch);
