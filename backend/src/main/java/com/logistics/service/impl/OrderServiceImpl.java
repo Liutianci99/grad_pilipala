@@ -555,7 +555,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 查询该配送员的运输批次（status=0 待出发 或 status=1 配送中）
         QueryWrapper<DeliveryBatch> batchQuery = new QueryWrapper<>();
-        batchQuery.eq("driver_id", personnel.getId());
+        batchQuery.eq("driver_id", personnel.getUserId());
         batchQuery.in("status", 0, 1); // 待出发和配送中
         batchQuery.orderByDesc("created_at");
 
@@ -613,7 +613,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 查询该配送员的已完成批次（status=2 已完成）
         QueryWrapper<DeliveryBatch> batchQuery = new QueryWrapper<>();
-        batchQuery.eq("driver_id", personnel.getId());
+        batchQuery.eq("driver_id", personnel.getUserId());
         batchQuery.eq("status", 2); // 已完成
 
         // 如果有时间范围，添加时间筛选
