@@ -31,6 +31,7 @@ jobs:
         with:
           context: ./backend
           push: true
+          no-cache: true
           tags: ${{ env.BACKEND_IMAGE }}:latest
 
       - name: Build & push frontend
