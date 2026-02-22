@@ -89,10 +89,42 @@ OrderServiceImpl.java:[348,22] cannot find symbol
 2. Lombok 注解处理器在 CI 环境中的版本差异
 3. 需要检查 pom.xml 中 Lombok 依赖配置
 
-**状态：** 已修复
+**状态：** ✅ 已修复并部署
 
 **真正原因：** 重构时添加 `@Override`、`@Transactional`、`@Operation` 注解时，没注意到这些注解已经存在，导致重复注解。Java 不允许非 `@Repeatable` 注解重复使用。
 
-**修复：** 删除重复的注解。
+**修复：** 删除重复的注解（花了3次提交才完全清理干净）。
 
 **教训：** 编辑代码时，先检查目标位置是否已有相同注解，避免重复添加。
+
+---
+
+## 最终结果
+
+### 部署状态
+- CI/CD: ✅ 通过（第5次尝试）
+- 前后端: ✅ 已重新部署
+- 验证: ✅ polyline 现在是扁平坐标数组（不再是 delta 编码）
+
+### 代码变更统计
+- 5 files changed, 33 insertions(+), 78 deletions(-)
+- 净减少 45 行代码 — 更简洁
+
+### 提交记录
+1. `1f1f282` - refactor: business flow stability improvements
+2. `ba3dfd2` - Merge branch 'refactor/business-flow-stability' into main (--no-ff)
+3. `24998f9` - docs: add refactor log
+4. `7a22948` - ci: add no-cache to backend build (误判，实际是注解问题)
+5. `a0a97ca` - fix: remove duplicate annotations causing compilation errors
+6. `8a71e68` - fix: remove remaining duplicate @Override annotation ✅
+
+### API 验证
+```bash
+# Order 10020 polyline 测试
+polyline length: 7918
+first 6 values: [39.793145, 116.528082, 39.787225, 116.515841, 39.786896, 116.51504]
+all valid coords (no deltas): True ✅
+currentLat=35.5211030000001, progress=35.0%
+```
+
+前端不再需要解码 polyline — 后端直接发送可用的坐标数组。
