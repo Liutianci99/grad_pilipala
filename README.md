@@ -52,7 +52,6 @@ flowchart TB
     class ConfirmReceive,CompleteBatch done
 ```
 
-> 📐 draw.io 版本：[`business-flow.drawio`](business-flow.drawio) — 用 [app.diagrams.net](https://app.diagrams.net) 打开
 
 ## 功能概览
 
