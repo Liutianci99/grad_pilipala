@@ -26,19 +26,19 @@ public interface OrderService {
      * 获取配送员的待揽收订单列表（根据配送员所属仓库筛选）
      * @param driverId 配送员用户ID
      */
-    List<Order> getPendingPickupOrders(Long driverId, String search);
+    List<Order> getPendingPickupOrders(Integer driverId, String search);
     
     /**
      * 获取配送员的待送货订单列表（已揽收状态）
      * @param driverId 配送员用户ID
      */
-    List<Order> getPendingDeliveryOrders(Long driverId);
+    List<Order> getPendingDeliveryOrders(Integer driverId);
     
     /**
      * 创建送货批次
      * @param driverId 配送员用户ID
      */
-    com.logistics.dto.CreateBatchResponse createDeliveryBatch(Long driverId, List<Integer> orderIds);
+    com.logistics.dto.CreateBatchResponse createDeliveryBatch(Integer driverId, List<Integer> orderIds);
     
     List<Order> getDeliveryBatchOrders(Integer warehouseId);
 
@@ -52,19 +52,19 @@ public interface OrderService {
      * 获取已完成的运输批次（历史任务）
      * @param driverId 配送员用户ID
      */
-    List<Order> getCompletedDeliveryBatches(Long driverId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime);
+    List<Order> getCompletedDeliveryBatches(Integer driverId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime);
 
     /**
      * 获取运输批次列表（包含批次状态信息）
      * @param driverId 配送员用户ID
      */
-    List<com.logistics.dto.DeliveryBatchResponse> getDeliveryBatchesWithStatus(Long driverId, Integer warehouseId);
+    List<com.logistics.dto.DeliveryBatchResponse> getDeliveryBatchesWithStatus(Integer driverId, Integer warehouseId);
 
     /**
      * 获取已完成的运输批次列表
      * @param driverId 配送员用户ID
      */
-    List<com.logistics.dto.DeliveryBatchResponse> getCompletedBatchesWithStatus(Long driverId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime);
+    List<com.logistics.dto.DeliveryBatchResponse> getCompletedBatchesWithStatus(Integer driverId, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime);
 
     List<Order> getOrdersByBatchId(Integer batchId);
 }

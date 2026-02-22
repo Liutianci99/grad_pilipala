@@ -103,10 +103,16 @@ public class OrderServiceImpl implements OrderService {
         order.setUnitPrice(mall.getPrice());
         order.setTotalAmount(totalAmount);
         order.setImageUrl(mall.getImageUrl());
+        order.setWarehouseId(mall.getWarehouseId());
         order.setStatus(0);
         order.setOrderTime(LocalDateTime.now());
-        
+
         orderMapper.insert(order);
+
+        // 扣减商城可售库存
+        mall.setAvailableQuantity(mall.getAvailableQuantity() - request.getQuantity());
+        mallMapper.updateById(mall);
+
         return order;
     }
     
@@ -157,7 +163,7 @@ public class OrderServiceImpl implements OrderService {
     }
     
     @Override
-    public List<Order> getPendingPickupOrders(Long driverId, String search) {
+    public List<Order> getPendingPickupOrders(Integer driverId, String search) {
         // 直接从 users 表获取 warehouse_id
         User driver = userMapper.selectById(driverId);
         if (driver == null || driver.getWarehouseId() == null) {
@@ -179,7 +185,7 @@ public class OrderServiceImpl implements OrderService {
     }
     
     @Override
-    public List<Order> getPendingDeliveryOrders(Long driverId) {
+    public List<Order> getPendingDeliveryOrders(Integer driverId) {
         User driver = userMapper.selectById(driverId);
         if (driver == null || driver.getWarehouseId() == null) {
             throw new RuntimeException("配送员或仓库信息不存在");
@@ -189,7 +195,7 @@ public class OrderServiceImpl implements OrderService {
     
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public com.logistics.dto.CreateBatchResponse createDeliveryBatch(Long driverId, List<Integer> orderIds) {
+    public com.logistics.dto.CreateBatchResponse createDeliveryBatch(Integer driverId, List<Integer> orderIds) {
         if (driverId == null) throw new RuntimeException("配送员ID不能为空");
         if (orderIds == null || orderIds.isEmpty()) throw new RuntimeException("订单列表不能为空");
         if (orderIds.size() > 5) throw new RuntimeException("每个批次最多只能选择5个订单");
@@ -266,7 +272,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 保存批次 — driver_id 直接用 users.id
         DeliveryBatch batch = new DeliveryBatch();
-        batch.setDriverId(driverId.intValue());
+        batch.setDriverId(driverId);
         batch.setWarehouseId(warehouse.getId());
         batch.setStatus(0);
         batch.setCreatedAt(LocalDateTime.now());
@@ -344,7 +350,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<Order> getCompletedDeliveryBatches(Long driverId, LocalDateTime startTime, LocalDateTime endTime) {
+    public List<Order> getCompletedDeliveryBatches(Integer driverId, LocalDateTime startTime, LocalDateTime endTime) {
         User driver = userMapper.selectById(driverId);
         if (driver == null || driver.getWarehouseId() == null) {
             throw new RuntimeException("配送员或仓库信息不存在");
@@ -367,7 +373,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<com.logistics.dto.DeliveryBatchResponse> getDeliveryBatchesWithStatus(Long driverId, Integer warehouseId) {
+    public List<com.logistics.dto.DeliveryBatchResponse> getDeliveryBatchesWithStatus(Integer driverId, Integer warehouseId) {
         // driver_id 现在直接是 users.id
         QueryWrapper<DeliveryBatch> batchQuery = new QueryWrapper<>();
         batchQuery.eq("driver_id", driverId);
@@ -379,7 +385,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<com.logistics.dto.DeliveryBatchResponse> getCompletedBatchesWithStatus(Long driverId, LocalDateTime startTime, LocalDateTime endTime) {
+    public List<com.logistics.dto.DeliveryBatchResponse> getCompletedBatchesWithStatus(Integer driverId, LocalDateTime startTime, LocalDateTime endTime) {
         QueryWrapper<DeliveryBatch> batchQuery = new QueryWrapper<>();
         batchQuery.eq("driver_id", driverId);
         batchQuery.eq("status", 2);
