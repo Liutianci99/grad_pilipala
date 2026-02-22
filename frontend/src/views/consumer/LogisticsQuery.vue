@@ -296,6 +296,22 @@ watch(() => route.params.orderId, (newId) => {
 }, { immediate: false })
 
 // ── Map ──
+// Decode Tencent Maps delta-encoded polyline
+const decodeTencentPolyline = (coors) => {
+    const path = []
+    if (!coors || coors.length < 2) return path
+    let lat = coors[0], lng = coors[1]
+    path.push(new TMap.LatLng(lat, lng))
+    for (let i = 2; i < coors.length; i += 2) {
+        if (i + 1 < coors.length) {
+            lat += coors[i] / 1e6
+            lng += coors[i + 1] / 1e6
+            path.push(new TMap.LatLng(lat, lng))
+        }
+    }
+    return path
+}
+
 const waitForTMap = () => new Promise((resolve, reject) => {
     if (window.TMap) { resolve(); return }
     let n = 0
@@ -321,12 +337,9 @@ const initMap = async (data, order) => {
     map = new TMap.Map(el, { zoom: 10, center })
 
     if (data.polyline) {
-        // polyline is flat [lat1,lng1,lat2,lng2,...] — no decompression needed
+        // Decode Tencent Maps delta-encoded polyline
         const coors = data.polyline
-        const path = []
-        for (let i = 0; i < coors.length; i += 2) {
-            if (i + 1 < coors.length) path.push(new TMap.LatLng(coors[i], coors[i + 1]))
-        }
+        const path = decodeTencentPolyline(coors)
         if (path.length) {
             routePolyline = new TMap.MultiPolyline({
                 map,
