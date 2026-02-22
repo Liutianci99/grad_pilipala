@@ -48,6 +48,8 @@ flowchart TB
         CompleteBatch -.->|已送达| ConfirmReceive
     end
 
+    AdminFlow ~~~ BusinessFlow
+
     style AdminFlow fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
     style BusinessFlow fill:none,stroke:none
     style MerchantFlow fill:#FFF8E1,stroke:#F57C00,stroke-width:2px,color:#E65100
