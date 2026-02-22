@@ -215,14 +215,6 @@ public class OrderServiceImpl implements OrderService {
         if (orderIds == null || orderIds.isEmpty()) throw new RuntimeException("订单列表不能为空");
         if (orderIds.size() > 5) throw new RuntimeException("每个批次最多只能选择5个订单");
 
-        // 检查配送员是否有正在配送的批次（同时只能配送一个批次）
-        Long deliveringCount = deliveryBatchMapper.selectCount(
-            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DeliveryBatch>()
-                .eq("driver_id", driverId)
-                .eq("status", 1)
-        );
-        if (deliveringCount > 0) throw new RuntimeException("配送员有正在配送的批次，请先完成当前配送");
-
         // 直接从 users 表获取配送员信息
         User driver = userMapper.selectById(driverId);
         if (driver == null || driver.getWarehouseId() == null) {
@@ -361,13 +353,17 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void completeDelivery(List<Integer> orderIds) {
         if (orderIds == null || orderIds.isEmpty()) throw new RuntimeException("订单列表不能为空");
+        LocalDateTime now = LocalDateTime.now();
         for (Integer orderId : orderIds) {
             Order order = orderMapper.selectById(orderId);
             if (order == null) throw new RuntimeException("订单不存在: " + orderId);
             if (order.getStatus() != 3) throw new RuntimeException("订单状态不正确，无法完成送货: " + orderId);
             order.setStatus(4);
+            order.setDeliveryTime(now);
             orderMapper.updateById(order);
         }
     }

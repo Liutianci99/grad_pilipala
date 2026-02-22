@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -49,7 +50,9 @@ public class DeliveryBatchController {
     private final DeliveryBatchOrderMapper deliveryBatchOrderMapper;
 
     @Operation(summary = "开始运输批次")
+    @Operation(summary = "开始运输批次")
     @PostMapping("/start-batch")
+    @Transactional(rollbackFor = Exception.class)
     public Result<Void> startBatch(@Parameter(description = "批次ID") @RequestParam Integer batchId) {
         log.info("开始运输批次: batchId={}", batchId);
 
@@ -143,7 +146,9 @@ public class DeliveryBatchController {
     }
 
     @Operation(summary = "完成批次配送")
+    @Operation(summary = "完成配送批次")
     @PostMapping("/complete-batch")
+    @Transactional(rollbackFor = Exception.class)
     public Result<Void> completeBatch(@Parameter(description = "批次ID") @RequestParam Integer batchId) {
         DeliveryBatch batch = deliveryBatchMapper.selectById(batchId);
         if (batch == null) throw new BusinessException("批次不存在");
@@ -166,7 +171,7 @@ public class DeliveryBatchController {
     @Operation(summary = "订单物流追踪")
     @GetMapping("/track-by-order")
     public Result<?> trackByOrder(@Parameter(description = "订单ID") @RequestParam Integer orderId) {
-        // 获取最新的批次关联（一个订单可能被重新分配过批次）
+        // 获取最新的批次关联
         com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DeliveryBatchOrder> qw =
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
         qw.eq("order_id", orderId).orderByDesc("batch_id").last("LIMIT 1");
@@ -192,32 +197,18 @@ public class DeliveryBatchController {
 
         // 配送中或已完成 — 返回路线和位置数据
         if (batch.getStatus() >= 1 && batch.getRouteData() != null) {
-            JSONArray polyline = JSON.parseArray(batch.getRouteData());
+            // 解压polyline为扁平坐标数组 [lat,lng,lat,lng,...]
+            JSONArray pathPoints = tencentMapService.decompressPolyline(batch.getRouteData());
+            JSONArray flatPolyline = new JSONArray();
+            for (int i = 0; i < pathPoints.size(); i++) {
+                JSONArray point = pathPoints.getJSONArray(i);
+                flatPolyline.add(point.getDoubleValue(0)); // lat
+                flatPolyline.add(point.getDoubleValue(1)); // lng
+            }
+            
+            resultObj.put("polyline", flatPolyline);
             resultObj.put("totalDistance", batch.getTotalDistance());
             resultObj.put("totalDuration", batch.getTotalDuration());
-
-            // 检测格式: [{lng,lat,name}] (旧假数据) vs [num,num,...] (腾讯地图压缩)
-            boolean isWaypointFormat = !polyline.isEmpty() && polyline.get(0) instanceof JSONObject;
-
-            JSONArray pathPoints;
-            if (isWaypointFormat) {
-                pathPoints = new JSONArray();
-                JSONArray frontendPolyline = new JSONArray();
-                for (int i = 0; i < polyline.size(); i++) {
-                    JSONObject wp = polyline.getJSONObject(i);
-                    JSONArray point = new JSONArray();
-                    point.add(wp.getDoubleValue("lat"));
-                    point.add(wp.getDoubleValue("lng"));
-                    pathPoints.add(point);
-                    frontendPolyline.add(wp.getDoubleValue("lat"));
-                    frontendPolyline.add(wp.getDoubleValue("lng"));
-                }
-                resultObj.put("polyline", frontendPolyline);
-                resultObj.put("waypoints", polyline);
-            } else {
-                resultObj.put("polyline", polyline);
-                pathPoints = tencentMapService.decompressPolyline(batch.getRouteData());
-            }
 
             if (!pathPoints.isEmpty()) {
                 int currentIndex = Math.min(
