@@ -13,151 +13,46 @@ Spring Boot 3.2 + Vue 3 + MySQL 全栈物流管理系统，支持管理员、商
 
 ## 业务流程图
 
-### 核心物流链路
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#f0f0f0', 'edgeLabelBackground':'#ffffff'}}}%%
-flowchart LR
-%% === CORE LOGISTICS PIPELINE ===
-    OrderReceived([顾客下单]):::info
-    MerchantShip[商家发货]:::merchantLayer
-    DriverPickup[快递员揽收]:::driverLayer
-    CreateBatch[创建批次]:::driverLayer
-    StartTransport[[开始运输]]:::processingLayer
-    Delivering[沿路线配送]:::processingLayer
-    Arrived([到达目的地]):::operational
-    Confirmed([顾客确认收货]):::operational
-
-    OrderReceived --> MerchantShip --> DriverPickup --> CreateBatch
-    CreateBatch --> StartTransport --> Delivering --> Arrived --> Confirmed
-
-%% === SEMANTIC COLORS ===
-    classDef info fill:#2196F3,stroke:#1565C0,color:#FFFFFF,stroke-width:2px
-    classDef operational fill:#4CAF50,stroke:#2E7D32,color:#FFFFFF,stroke-width:2px
-    classDef merchantLayer fill:#FFF3E0,stroke:#E65100,color:#BF360C,stroke-width:1px
-    classDef driverLayer fill:#E3F2FD,stroke:#1565C0,color:#0D47A1,stroke-width:1px
-    classDef processingLayer fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:1px
-```
-
-### 四角色完整业务流程
-
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#f0f0f0', 'edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
-%% === MERCHANT FLOW ===
-    subgraph MerchantFlow["🏪 商户流程"]
+    subgraph MerchantFlow["🏪 商户"]
         direction LR
-        StockIn[/商品入库/]:::storageLayer
-        Publish[商城上架]:::merchantLayer
-        ReceiveOrder[收到新订单]:::merchantLayer
-        ShipOrder[[确认发货]]:::processingLayer
-        MerchantTrack[物流查询]:::presentationLayer
-        StockIn --> Publish --> ReceiveOrder --> ShipOrder --> MerchantTrack
+        StockIn[商品入库] --> Publish[商城上架] --> ReceiveOrder[收到订单] --> ShipOrder[确认发货]
     end
 
-%% === CONSUMER FLOW ===
-    subgraph ConsumerFlow["🛒 消费者流程"]
+    subgraph ConsumerFlow["🛒 消费者"]
         direction LR
-        BrowseMall[/浏览商城/]:::presentationLayer
-        PlaceOrder[[选择商品下单]]:::processingLayer
-        TrackLogistics[查看物流轨迹]:::presentationLayer
-        ConfirmReceive([确认收货]):::operational
-        BrowseMall --> PlaceOrder --> TrackLogistics --> ConfirmReceive
+        BrowseMall[浏览商城] --> PlaceOrder[下单] --> TrackLogistics[查看物流] --> ConfirmReceive([确认收货])
     end
 
-%% === DRIVER FLOW ===
-    subgraph DriverFlow["🚛 配送员流程"]
+    subgraph DriverFlow["🚛 配送员"]
         direction LR
-        Pickup[待揽收]:::driverLayer
-        CreateBatchNode[创建配送批次]:::driverLayer
-        StartDelivery[[开始运输]]:::processingLayer
-        OnRoute[沿路线配送]:::processingLayer
-        CompleteBatch([完成批次]):::operational
-        HistoryTasks[(历史任务)]:::storageLayer
-        Pickup --> CreateBatchNode --> StartDelivery --> OnRoute --> CompleteBatch --> HistoryTasks
+        Pickup[揽收] --> CreateBatch[创建批次] --> StartDelivery[开始运输] --> OnRoute[沿路线配送] --> CompleteBatch([完成批次])
     end
 
-%% === ADMIN FLOW ===
-    subgraph AdminFlow["⚙️ 管理员流程"]
+    subgraph AdminFlow["⚙️ 管理员"]
         direction LR
-        UserMgmt[用户管理 CRUD]:::adminLayer
-        OrderMgmt[订单管理与状态修改]:::adminLayer
-        DataAnalysis[数据分析与统计图表]:::adminLayer
+        UserMgmt[用户管理] ~~~ OrderMgmt[订单管理] ~~~ DataAnalysis[数据分析]
     end
 
-%% === CROSS-ROLE INTERACTIONS ===
     Publish -.->|商品展示| BrowseMall
     PlaceOrder -.->|生成订单| ReceiveOrder
     ShipOrder -.->|订单流转| Pickup
-    StartDelivery -.->|调用腾讯地图API| OnRoute
-    OnRoute -.->|实时GPS轨迹| TrackLogistics
-    CompleteBatch -.->|订单已到达| ConfirmReceive
+    OnRoute -.->|实时GPS| TrackLogistics
+    CompleteBatch -.->|已送达| ConfirmReceive
 
-%% === SUBGRAPH STYLES ===
-    style MerchantFlow fill:#FFF8E120,stroke:#E65100,stroke-width:2px
-    style ConsumerFlow fill:#E8F5E920,stroke:#2E7D32,stroke-width:2px
-    style DriverFlow fill:#E3F2FD20,stroke:#1565C0,stroke-width:2px
-    style AdminFlow fill:#F3E5F520,stroke:#7B1FA2,stroke-width:2px
+    style MerchantFlow fill:#FFF8E1,stroke:#F57C00,stroke-width:2px,color:#E65100
+    style ConsumerFlow fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#1B5E20
+    style DriverFlow fill:#E3F2FD,stroke:#1976D2,stroke-width:2px,color:#0D47A1
+    style AdminFlow fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
 
-%% === SEMANTIC COLOR DEFINITIONS ===
-    classDef operational fill:#4CAF50,stroke:#2E7D32,color:#FFFFFF,stroke-width:2px
-    classDef info fill:#2196F3,stroke:#1565C0,color:#FFFFFF,stroke-width:2px
-    classDef processingLayer fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:1px
-    classDef storageLayer fill:#FFF3E0,stroke:#E65100,color:#BF360C,stroke-width:1px
-    classDef presentationLayer fill:#E0F2F1,stroke:#00796B,color:#004D40,stroke-width:1px
-    classDef merchantLayer fill:#FFF3E0,stroke:#FF9800,color:#E65100,stroke-width:2px
-    classDef driverLayer fill:#E3F2FD,stroke:#2196F3,color:#0D47A1,stroke-width:2px
-    classDef adminLayer fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C,stroke-width:2px
+    classDef default fill:#ffffff,stroke:#999999,color:#333333,stroke-width:1px
+    classDef done fill:#4CAF50,stroke:#2E7D32,color:#FFFFFF,stroke-width:2px
+    class ConfirmReceive,CompleteBatch done
 ```
 
-### 配送路线规划与实时追踪
-
-```mermaid
-%%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#f0f0f0', 'edgeLabelBackground':'#ffffff'}}}%%
-flowchart LR
-%% === ROUTE PLANNING ===
-    subgraph RoutePlan["📍 路线规划"]
-        direction LR
-        Warehouse([仓库地址 — 起点]):::info
-        WaypointA[途径点1 — 顾客A]:::presentationLayer
-        WaypointB[途径点2 — 顾客B]:::presentationLayer
-        Destination([最远顾客地址 — 终点]):::operational
-        Warehouse --> WaypointA --> WaypointB --> Destination
-    end
-
-%% === TENCENT MAP API ===
-    TencentAPI{{腾讯地图驾车路径API}}:::communicationLayer
-
-%% === REAL-TIME TRACKING ===
-    subgraph LiveTrack["🗺️ 实时追踪"]
-        direction TB
-        SimGPS[[系统模拟GPS定位]]:::processingLayer
-        MapRender[腾讯地图渲染]:::presentationLayer
-        TruckMarker[🚛 货车标记沿路线移动]:::driverLayer
-        RouteLine[📍 路线polyline绘制]:::driverLayer
-        AddrMarkers[📦 各顾客地址标记]:::driverLayer
-        SimGPS --> MapRender
-        MapRender --> TruckMarker
-        MapRender --> RouteLine
-        MapRender --> AddrMarkers
-    end
-
-    RoutePlan ==>|请求路径规划| TencentAPI ==>|返回polyline数据| LiveTrack
-
-%% === STYLES ===
-    style RoutePlan fill:#E3F2FD20,stroke:#1565C0,stroke-width:2px
-    style LiveTrack fill:#E8F5E920,stroke:#2E7D32,stroke-width:2px
-
-    classDef info fill:#2196F3,stroke:#1565C0,color:#FFFFFF,stroke-width:2px
-    classDef operational fill:#4CAF50,stroke:#2E7D32,color:#FFFFFF,stroke-width:2px
-    classDef processingLayer fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:1px
-    classDef presentationLayer fill:#E0F2F1,stroke:#00796B,color:#004D40,stroke-width:1px
-    classDef communicationLayer fill:#F3E5F5,stroke:#7B1FA2,color:#4A148C,stroke-width:2px
-    classDef driverLayer fill:#E3F2FD,stroke:#2196F3,color:#0D47A1,stroke-width:2px
-```
-
-> 📐 完整的专业流程图（draw.io 格式）：[`business-flow.drawio`](business-flow.drawio)
-> 可用 [app.diagrams.net](https://app.diagrams.net) 在线打开查看
+> 📐 draw.io 版本：[`business-flow.drawio`](business-flow.drawio) — 用 [app.diagrams.net](https://app.diagrams.net) 打开
 
 ## 功能概览
 
