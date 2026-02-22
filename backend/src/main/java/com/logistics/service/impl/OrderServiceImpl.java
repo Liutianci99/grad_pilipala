@@ -352,8 +352,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    @Override
+        @Override
     @Transactional(rollbackFor = Exception.class)
     public void completeDelivery(List<Integer> orderIds) {
         if (orderIds == null || orderIds.isEmpty()) throw new RuntimeException("订单列表不能为空");

@@ -50,7 +50,6 @@ public class DeliveryBatchController {
     private final DeliveryBatchOrderMapper deliveryBatchOrderMapper;
 
     @Operation(summary = "开始运输批次")
-    @Operation(summary = "开始运输批次")
     @PostMapping("/start-batch")
     @Transactional(rollbackFor = Exception.class)
     public Result<Void> startBatch(@Parameter(description = "批次ID") @RequestParam Integer batchId) {
@@ -145,7 +144,6 @@ public class DeliveryBatchController {
         return Result.success(buildLocationResponse(batch));
     }
 
-    @Operation(summary = "完成批次配送")
     @Operation(summary = "完成配送批次")
     @PostMapping("/complete-batch")
     @Transactional(rollbackFor = Exception.class)

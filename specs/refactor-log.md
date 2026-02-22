@@ -89,4 +89,10 @@ OrderServiceImpl.java:[348,22] cannot find symbol
 2. Lombok 注解处理器在 CI 环境中的版本差异
 3. 需要检查 pom.xml 中 Lombok 依赖配置
 
-**状态：** 排查中
+**状态：** 已修复
+
+**真正原因：** 重构时添加 `@Override`、`@Transactional`、`@Operation` 注解时，没注意到这些注解已经存在，导致重复注解。Java 不允许非 `@Repeatable` 注解重复使用。
+
+**修复：** 删除重复的注解。
+
+**教训：** 编辑代码时，先检查目标位置是否已有相同注解，避免重复添加。
