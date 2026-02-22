@@ -41,6 +41,10 @@ backend-run.log
 # ===== Docker =====
 docker-compose.override.yml
 
+# ===== AI / Cache =====
+.claude/
+.npm-cache/
+
 # ===== Misc =====
 package-lock.json
 pnpm-lock.yaml
