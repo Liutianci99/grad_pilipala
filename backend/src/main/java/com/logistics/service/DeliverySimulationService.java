@@ -77,21 +77,14 @@ public class DeliverySimulationService {
                 batch.setCurrentIndex(i);
                 deliveryBatchMapper.updateById(batch);
 
-                // 每10个点记录一次位置
-                if (i % 10 == 0 || i == totalPoints - 1) {
+                // 每50个点记录一次位置（不调用逆地理编码，节省API配额）
+                if (i % 50 == 0 || i == totalPoints - 1) {
                     DeliveryLocation location = new DeliveryLocation();
                     location.setBatchId(batchId);
                     location.setLatitude(new BigDecimal(latitude));
                     location.setLongitude(new BigDecimal(longitude));
                     location.setPathIndex(i);
-
-                    try {
-                        String address = tencentMapService.getAddress(latitude, longitude);
-                        location.setAddress(address);
-                    } catch (Exception e) {
-                        log.warn("获取地址失败: {}", e.getMessage());
-                        location.setAddress("位置获取中...");
-                    }
+                    location.setAddress(null);
 
                     deliveryLocationMapper.insert(location);
                 }
