@@ -200,13 +200,13 @@ public class OrderServiceImpl implements OrderService {
         if (orderIds == null || orderIds.isEmpty()) throw new RuntimeException("订单列表不能为空");
         if (orderIds.size() > 5) throw new RuntimeException("每个批次最多只能选择5个订单");
 
-        // 检查配送员是否有未完成的批次
-        Long activeBatchCount = deliveryBatchMapper.selectCount(
+        // 检查配送员是否有正在配送的批次（同时只能配送一个批次）
+        Long deliveringCount = deliveryBatchMapper.selectCount(
             new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DeliveryBatch>()
                 .eq("driver_id", driverId)
-                .in("status", 0, 1)
+                .eq("status", 1)
         );
-        if (activeBatchCount > 0) throw new RuntimeException("配送员有未完成的批次，请先完成当前批次");
+        if (deliveringCount > 0) throw new RuntimeException("配送员有正在配送的批次，请先完成当前配送");
 
         // 直接从 users 表获取配送员信息
         User driver = userMapper.selectById(driverId);

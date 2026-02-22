@@ -57,6 +57,14 @@ public class DeliveryBatchController {
         if (batch == null) throw new BusinessException("批次不存在");
         if (batch.getStatus() != 0) throw new BusinessException("批次状态不正确，只能开始待运输的批次");
 
+        // 检查该配送员是否已有配送中的批次
+        Long deliveringCount = deliveryBatchMapper.selectCount(
+            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<DeliveryBatch>()
+                .eq("driver_id", batch.getDriverId())
+                .eq("status", 1)
+        );
+        if (deliveringCount > 0) throw new BusinessException("已有正在配送的批次，请先完成当前配送");
+
         batch.setStatus(1);
         batch.setStartedAt(LocalDateTime.now());
         deliveryBatchMapper.updateById(batch);
