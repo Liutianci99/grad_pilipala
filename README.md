@@ -16,36 +16,46 @@ Spring Boot 3.2 + Vue 3 + MySQL 全栈物流管理系统，支持管理员、商
 ```mermaid
 %%{init: {'theme':'base', 'themeVariables': {'primaryColor':'#f0f0f0', 'edgeLabelBackground':'#ffffff'}}}%%
 flowchart TB
-    subgraph MerchantFlow["🏪 商户"]
-        direction LR
-        StockIn[商品入库] --> Publish[商城上架] --> ReceiveOrder[收到订单] --> ShipOrder[确认发货]
-    end
-
-    subgraph ConsumerFlow["🛒 消费者"]
-        direction LR
-        BrowseMall[浏览商城] --> PlaceOrder[下单] --> TrackLogistics[查看物流] --> ConfirmReceive([确认收货])
-    end
-
-    subgraph DriverFlow["🚛 配送员"]
-        direction LR
-        Pickup[揽收] --> CreateBatch[创建批次] --> StartDelivery[开始运输] --> OnRoute[沿路线配送] --> CompleteBatch([完成批次])
-    end
-
-    subgraph AdminFlow["⚙️ 管理员"]
+%% === 管理员：监控全局 ===
+    subgraph AdminFlow["⚙️ 管理员 — 全局监控"]
         direction LR
         UserMgmt[用户管理] ~~~ OrderMgmt[订单管理] ~~~ DataAnalysis[数据分析]
     end
 
-    Publish -.->|商品展示| BrowseMall
-    PlaceOrder -.->|生成订单| ReceiveOrder
-    ShipOrder -.->|订单流转| Pickup
-    OnRoute -.->|实时GPS| TrackLogistics
-    CompleteBatch -.->|已送达| ConfirmReceive
+%% === 核心业务流程 ===
+    subgraph BusinessFlow[" "]
+        direction TB
 
+        subgraph MerchantFlow["🏪 商户"]
+            direction LR
+            StockIn[商品入库] --> Publish[商城上架] --> ReceiveOrder[收到订单] --> ShipOrder[确认发货]
+        end
+
+        subgraph ConsumerFlow["🛒 消费者"]
+            direction LR
+            BrowseMall[浏览商城] --> PlaceOrder[下单] --> TrackLogistics[查看物流] --> ConfirmReceive([确认收货])
+        end
+
+        subgraph DriverFlow["🚛 配送员"]
+            direction LR
+            Pickup[揽收] --> CreateBatch[创建批次] --> StartDelivery[开始运输] --> OnRoute[沿路线配送] --> CompleteBatch([完成批次])
+        end
+
+        Publish -.->|商品展示| BrowseMall
+        PlaceOrder -.->|生成订单| ReceiveOrder
+        ShipOrder -.->|订单流转| Pickup
+        OnRoute -.->|实时GPS| TrackLogistics
+        CompleteBatch -.->|已送达| ConfirmReceive
+    end
+
+%% === 管理员监控连线 ===
+    AdminFlow -->|用户 · 订单 · 数据| BusinessFlow
+
+    style AdminFlow fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
+    style BusinessFlow fill:none,stroke:none
     style MerchantFlow fill:#FFF8E1,stroke:#F57C00,stroke-width:2px,color:#E65100
     style ConsumerFlow fill:#E8F5E9,stroke:#388E3C,stroke-width:2px,color:#1B5E20
     style DriverFlow fill:#E3F2FD,stroke:#1976D2,stroke-width:2px,color:#0D47A1
-    style AdminFlow fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
 
     classDef default fill:#ffffff,stroke:#999999,color:#333333,stroke-width:1px
     classDef done fill:#4CAF50,stroke:#2E7D32,color:#FFFFFF,stroke-width:2px
