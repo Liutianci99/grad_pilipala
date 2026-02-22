@@ -1,0 +1,168 @@
+<mxfile host="app.diagrams.net" modified="2026-02-22T06:00:00.000Z" agent="Pilipala" version="24.0.0" type="device">
+  <diagram id="ecommerce-logistics-flow" name="电商物流管理系统 — 业务流程">
+    <mxGraphModel dx="2000" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1600" math="0" shadow="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ========== TITLE ========== -->
+        <mxCell id="title" value="电商物流管理系统 — 核心业务流程" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#1a1a2e;" parent="1" vertex="1">
+          <mxGeometry x="700" y="20" width="600" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Spring Boot 3.2 + Vue 3 + MySQL + 腾讯地图 | 四角色协同物流管理" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="700" y="65" width="600" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== ACTORS ========== -->
+        <mxCell id="actor-merchant" value="商户" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="60" y="160" width="40" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="actor-consumer" value="消费者" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="60" y="520" width="40" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="actor-driver" value="配送员" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="60" y="880" width="40" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="actor-admin" value="管理员" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1" parent="1" vertex="1">
+          <mxGeometry x="60" y="1220" width="40" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== STAGE 1: 商户流程 (黄色) ========== -->
+        <mxCell id="merchant-stage" value="商户流程" style="swimlane;fontSize=16;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;startSize=35;rounded=1;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="160" y="120" width="1900" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="m1" value="&lt;b&gt;商品入库&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;录入商品信息&lt;br&gt;选择目标仓库&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#d6b656;shadow=1;" parent="merchant-stage" vertex="1">
+          <mxGeometry x="30" y="50" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="m2" value="&lt;b&gt;商城上架&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;设置售价和数量&lt;br&gt;写入 mall 表&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#d6b656;shadow=1;" parent="merchant-stage" vertex="1">
+          <mxGeometry x="250" y="50" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="m3" value="&lt;b&gt;收到新订单&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;订单状态: 未发货(0)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#d6b656;shadow=1;" parent="merchant-stage" vertex="1">
+          <mxGeometry x="680" y="50" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="m4" value="&lt;b&gt;确认发货&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;订单状态 → 已发货(1)&lt;br&gt;记录 ship_time&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#d6b656;shadow=1;" parent="merchant-stage" vertex="1">
+          <mxGeometry x="900" y="50" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="m5" value="&lt;b&gt;物流查询&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;地图 + 路线 + 时间线&lt;br&gt;实时追踪配送进度&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#d6b656;shadow=1;" parent="merchant-stage" vertex="1">
+          <mxGeometry x="1130" y="50" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <!-- merchant arrows -->
+        <mxCell id="ma1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d6b656;" parent="merchant-stage" source="m1" target="m2" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ma2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d6b656;" parent="merchant-stage" source="m3" target="m4" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ma3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d6b656;" parent="merchant-stage" source="m4" target="m5" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ========== STAGE 2: 消费者流程 (绿色) ========== -->
+        <mxCell id="consumer-stage" value="消费者流程" style="swimlane;fontSize=16;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;startSize=35;rounded=1;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="160" y="480" width="1900" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="c1" value="&lt;b&gt;浏览商城&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;查看上架商品&lt;br&gt;搜索 + 筛选&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#82b366;shadow=1;" parent="consumer-stage" vertex="1">
+          <mxGeometry x="250" y="50" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="c2" value="&lt;b&gt;选择商品下单&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;选数量 + 收货地址&lt;br&gt;创建订单(status=0)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#82b366;shadow=1;" parent="consumer-stage" vertex="1">
+          <mxGeometry x="470" y="50" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="c3" value="&lt;b&gt;查看物流轨迹&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;腾讯地图实时追踪&lt;br&gt;仓库→自己地址路线&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#82b366;shadow=1;" parent="consumer-stage" vertex="1">
+          <mxGeometry x="1130" y="50" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="c4" value="&lt;b&gt;确认收货&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;订单状态 → 已收货(5)&lt;br&gt;记录 receive_time&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#82b366;shadow=1;" parent="consumer-stage" vertex="1">
+          <mxGeometry x="1580" y="50" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <!-- consumer arrows -->
+        <mxCell id="ca1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" parent="consumer-stage" source="c1" target="c2" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ca2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#82b366;" parent="consumer-stage" source="c3" target="c4" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ========== STAGE 3: 配送员流程 (蓝色) ========== -->
+        <mxCell id="driver-stage" value="配送员流程" style="swimlane;fontSize=16;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;startSize=35;rounded=1;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="160" y="840" width="1900" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="d1" value="&lt;b&gt;待揽收&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;查看已发货订单&lt;br&gt;执行揽收(status→2)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;shadow=1;" parent="driver-stage" vertex="1">
+          <mxGeometry x="30" y="50" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="d2" value="&lt;b&gt;创建配送批次&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;选择多个已揽收订单&lt;br&gt;组成一个批次(status=0)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;shadow=1;" parent="driver-stage" vertex="1">
+          <mxGeometry x="260" y="50" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="d3" value="&lt;b&gt;开始运输&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;调用腾讯地图API&lt;br&gt;规划驾车路线&lt;br&gt;批次→配送中(1)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;shadow=1;" parent="driver-stage" vertex="1">
+          <mxGeometry x="500" y="45" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="d4" value="&lt;b&gt;沿路线配送&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;🚛 GPS实时定位&lt;br&gt;途径点逐个送达&lt;br&gt;订单自动更新(status→4)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;shadow=1;" parent="driver-stage" vertex="1">
+          <mxGeometry x="740" y="45" width="190" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="d5" value="&lt;b&gt;完成批次&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;所有订单送达&lt;br&gt;批次→已完成(2)&lt;br&gt;记录 delivery_time&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;shadow=1;" parent="driver-stage" vertex="1">
+          <mxGeometry x="990" y="45" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="d6" value="&lt;b&gt;历史任务&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;查看已完成批次&lt;br&gt;配送记录归档&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#6c8ebf;shadow=1;" parent="driver-stage" vertex="1">
+          <mxGeometry x="1220" y="50" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <!-- driver arrows -->
+        <mxCell id="da1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" parent="driver-stage" source="d1" target="d2" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="da2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" parent="driver-stage" source="d2" target="d3" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="da3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" parent="driver-stage" source="d3" target="d4" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="da4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" parent="driver-stage" source="d4" target="d5" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="da5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#6c8ebf;" parent="driver-stage" source="d5" target="d6" edge="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ========== STAGE 4: 管理员流程 (紫色) ========== -->
+        <mxCell id="admin-stage" value="管理员流程" style="swimlane;fontSize=16;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;startSize=35;rounded=1;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="160" y="1180" width="1900" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="a1" value="&lt;b&gt;用户管理&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;CRUD 所有用户&lt;br&gt;按角色筛选&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#9673a6;shadow=1;" parent="admin-stage" vertex="1">
+          <mxGeometry x="30" y="50" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" value="&lt;b&gt;订单管理&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;查看/搜索/筛选&lt;br&gt;修改订单状态&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#9673a6;shadow=1;" parent="admin-stage" vertex="1">
+          <mxGeometry x="250" y="50" width="160" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" value="&lt;b&gt;数据分析&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;用户统计 · 订单统计&lt;br&gt;营收数据 · 趋势图表&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=13;fillColor=#ffffff;strokeColor=#9673a6;shadow=1;" parent="admin-stage" vertex="1">
+          <mxGeometry x="470" y="50" width="170" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== CROSS-ROLE ARROWS (虚线) ========== -->
+        <!-- 商城上架 → 消费者浏览 -->
+        <mxCell id="cross1" value="商品展示" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;dashed=1;strokeColor=#999999;fontSize=12;fontColor=#666666;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="m2" target="c1" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- 消费者下单 → 商户收到订单 -->
+        <mxCell id="cross2" value="生成订单" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;dashed=1;strokeColor=#999999;fontSize=12;fontColor=#666666;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="c2" target="m3" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- 商户发货 → 配送员揽收 -->
+        <mxCell id="cross3" value="订单流转" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;dashed=1;strokeColor=#999999;fontSize=12;fontColor=#666666;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="m4" target="d1" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- 配送中 → 消费者物流查询 -->
+        <mxCell id="cross4" value="实时GPS轨迹" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;dashed=1;strokeColor=#999999;fontSize=12;fontColor=#666666;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="d4" target="c3" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <!-- 完成批次 → 消费者确认收货 -->
+        <mxCell id="cross5" value="订单已到达" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;dashed=1;strokeColor=#999999;fontSize=12;fontColor=#666666;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="d5" target="c4" edge="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== DATABASE ========== -->
+        <mxCell id="db" value="&lt;b&gt;MySQL 8.0&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;orders · users · inventory&lt;br&gt;delivery_batches · address&lt;br&gt;delivery_location · mall&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fontSize=13;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=0;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1700" y="700" width="200" height="120" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== TENCENT MAP ========== -->
+        <mxCell id="tmap" value="&lt;b&gt;腾讯地图 API&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;驾车路径规划&lt;br&gt;Polyline 路线数据&lt;/font&gt;" style="shape=cloud;whiteSpace=wrap;html=1;fontSize=13;fillColor=#f0f0f0;strokeColor=#666666;shadow=1;" parent="1" vertex="1">
+          <mxGeometry x="1480" y="700" width="180" height="110" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== ORDER STATUS LEGEND ========== -->
+        <mxCell id="legend-box" value="订单状态流转" style="swimlane;fontSize=14;fillColor=#f5f5f5;strokeColor=#cccccc;fontStyle=1;startSize=30;rounded=1;" parent="1" vertex="1">
+          <mxGeometry x="1500" y="120" width="540" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend" value="未发货(0) → 已发货(1) → 已揽收(2) → 运输中(3) → 已到达(4) → 已收货(5)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#333333;" parent="legend-box" vertex="1">
+          <mxGeometry x="10" y="35" width="520" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- ========== BATCH STATUS LEGEND ========== -->
+        <mxCell id="legend-box2" value="批次状态流转" style="swimlane;fontSize=14;fillColor=#f5f5f5;strokeColor=#cccccc;fontStyle=1;startSize=30;rounded=1;" parent="1" vertex="1">
+          <mxGeometry x="1500" y="210" width="540" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend2" value="待出发(0) → 配送中(1) → 已完成(2)　｜　约束: 同一时间只能有一个配送中批次" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#333333;" parent="legend-box2" vertex="1">
+          <mxGeometry x="10" y="35" width="520" height="25" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

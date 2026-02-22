@@ -80,7 +80,7 @@ flowchart LR
     路线规划 -->|腾讯地图驾车路径API| 实时追踪
 ```
 
-> 📐 完整的专业流程图（draw.io 格式）：[`docs/business-flow.drawio`](docs/business-flow.drawio)
+> 📐 完整的专业流程图（draw.io 格式）：[`business-flow.drawio`](business-flow.drawio)
 > 可用 [app.diagrams.net](https://app.diagrams.net) 在线打开查看
 
 ## 功能概览
