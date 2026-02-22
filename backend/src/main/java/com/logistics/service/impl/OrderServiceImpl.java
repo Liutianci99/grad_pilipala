@@ -123,7 +123,9 @@ public class OrderServiceImpl implements OrderService {
         if (status != null) qw.eq("status", status);
         if (search != null && !search.trim().isEmpty()) qw.like("product_name", search);
         qw.orderByDesc("order_time");
-        return orderMapper.selectList(qw);
+        List<Order> orders = orderMapper.selectList(qw);
+        populateAddresses(orders);
+        return orders;
     }
     
     @Override
@@ -133,7 +135,20 @@ public class OrderServiceImpl implements OrderService {
         if (status != null) qw.eq("status", status);
         if (search != null && !search.trim().isEmpty()) qw.like("product_name", search);
         qw.orderByDesc("order_time");
-        return orderMapper.selectList(qw);
+        List<Order> orders = orderMapper.selectList(qw);
+        populateAddresses(orders);
+        return orders;
+    }
+
+    private void populateAddresses(List<Order> orders) {
+        for (Order order : orders) {
+            if (order.getAddressId() != null) {
+                Address addr = addressMapper.selectById(order.getAddressId());
+                if (addr != null) {
+                    order.setAddress(addr);
+                }
+            }
+        }
     }
     
     @Override
