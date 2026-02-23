@@ -9,11 +9,19 @@
             <form class="login-form" @submit.prevent="handleRegister">
                 <div class="form-group">
                     <label class="form-label">身份</label>
-                    <select v-model="form.role" class="form-select">
+                    <select v-model="form.role" class="form-select" @change="handleRoleChange">
                         <option value="">请选择身份</option>
                         <option value="merchant">商家</option>
                         <option value="consumer">顾客</option>
                         <option value="driver">配送员</option>
+                    </select>
+                </div>
+
+                <div v-if="form.role === 'driver'" class="form-group">
+                    <label class="form-label">所属仓库 <span style="color: #f4212e;">*</span></label>
+                    <select v-model="form.warehouseId" class="form-select">
+                        <option value="">请选择仓库</option>
+                        <option v-for="wh in warehouses" :key="wh.id" :value="wh.id">{{ wh.name }} - {{ wh.city }}</option>
                     </select>
                 </div>
 
@@ -41,34 +49,60 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const router = useRouter()
+const warehouses = ref([])
 
 const form = reactive({
     role: '',
     username: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    warehouseId: ''
 })
+
+const handleRoleChange = () => {
+    // Clear warehouse selection when role changes
+    form.warehouseId = ''
+}
+
+const fetchWarehouses = async () => {
+    try {
+        const response = await request.get('/warehouse/list')
+        if (response.success) {
+            warehouses.value = response.data
+        }
+    } catch (e) {
+        console.error('Failed to fetch warehouses:', e)
+    }
+}
 
 const handleRegister = async () => {
     if (!form.role) return ElMessage.warning('请选择身份')
+    if (form.role === 'driver' && !form.warehouseId) return ElMessage.warning('请选择所属仓库')
     if (!form.username) return ElMessage.warning('请输入用户名')
     if (!form.password) return ElMessage.warning('请输入密码')
     if (form.password !== form.confirmPassword) return ElMessage.warning('两次密码不一致')
 
     loading.value = true
     try {
-        const data = await request.post('/auth/register', {
+        const payload = {
             username: form.username,
             password: form.password,
             role: form.role
-        })
+        }
+        
+        // Add warehouseId for drivers
+        if (form.role === 'driver') {
+            payload.warehouseId = form.warehouseId
+        }
+
+        const data = await request.post('/auth/register', payload)
 
         if (!data.success) {
             ElMessage.error(data.message || '注册失败')
@@ -81,6 +115,10 @@ const handleRegister = async () => {
         loading.value = false
     }
 }
+
+onMounted(() => {
+    fetchWarehouses()
+})
 </script>
 
 <style scoped>

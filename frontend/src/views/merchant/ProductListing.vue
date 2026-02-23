@@ -6,34 +6,37 @@
             <p>暂无未上架商品</p>
         </div>
 
-        <div v-else style="display: flex; flex-direction: column; gap: 16px;">
-            <div class="product-item" v-for="product in offlineProducts" :key="product.id">
-                <div class="product-image" style="width: 100px; height: 100px;">
+        <div v-else class="products-grid">
+            <div class="product-card" v-for="product in offlineProducts" :key="product.id">
+                <div class="product-image-large">
                     <img :src="product.image" :alt="product.name" />
                 </div>
-                <div style="flex: 1;">
-                    <h4 class="product-name">{{ product.name }}</h4>
-                    <p class="product-description">{{ product.description }}</p>
+                
+                <div class="product-info-section">
+                    <h3 class="product-name">{{ product.name }}</h3>
                     <div class="product-meta">
                         <span class="meta-item">库存: {{ product.stock }} 件</span>
                     </div>
                 </div>
-                <div style="display: flex; flex-direction: column; gap: 8px; min-width: 280px;">
+
+                <div class="listing-form">
                     <div class="form-group">
                         <label class="form-label">商品介绍</label>
-                        <textarea v-model="product.description" placeholder="请输入商品介绍" class="form-textarea" rows="2"></textarea>
+                        <textarea v-model="product.description" placeholder="请输入商品介绍" class="form-textarea" rows="3"></textarea>
                     </div>
+                    
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">上架数量</label>
+                            <label class="form-label">上架数量 <span class="required">*</span></label>
                             <input type="number" v-model.number="product.listingQuantity" class="form-input" min="1" :max="product.stock" />
                         </div>
                         <div class="form-group">
-                            <label class="form-label">定价 (¥)</label>
-                            <input type="number" v-model.number="product.listingPrice" class="form-input" min="0" step="0.01" />
+                            <label class="form-label">定价 (¥) <span class="required">*</span></label>
+                            <input type="number" v-model.number="product.listingPrice" class="form-input" min="0" step="0.01" placeholder="0.00" />
                         </div>
                     </div>
-                    <button class="btn btn-primary" @click="listProduct(product)">上架</button>
+                    
+                    <button class="btn btn-primary" @click="listProduct(product)" style="width: 100%;">上架商品</button>
                 </div>
             </div>
         </div>
@@ -94,5 +97,58 @@ onMounted(() => { fetchOfflineProducts() })
 </script>
 
 <style scoped>
-/* All shared classes come from design.css */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.product-card {
+    background: #fff;
+    border: 1px solid #eff3f4;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.product-card:hover {
+    border-color: #cfd9de;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.product-image-large {
+    width: 100%;
+    height: 200px;
+    background: #f7f9f9;
+    overflow: hidden;
+}
+
+.product-image-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-info-section {
+    padding: 16px 16px 0;
+}
+
+.product-info-section .product-name {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+}
+
+.listing-form {
+    padding: 12px 16px 16px;
+}
+
+.listing-form .form-group {
+    margin-bottom: 12px;
+}
+
+@media (max-width: 640px) {
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+}
 </style>

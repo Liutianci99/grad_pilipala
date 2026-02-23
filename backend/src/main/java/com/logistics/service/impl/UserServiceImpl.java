@@ -35,10 +35,28 @@ public class UserServiceImpl implements UserService {
         if (count > 0) {
             return new LoginResponse(false, "该用户名已被注册", null);
         }
+        
+        // Validate warehouseId for drivers
+        if ("driver".equals(req.getRole())) {
+            if (req.getWarehouseId() == null) {
+                return new LoginResponse(false, "配送员必须选择所属仓库", null);
+            }
+            Warehouse warehouse = warehouseMapper.selectById(req.getWarehouseId());
+            if (warehouse == null) {
+                return new LoginResponse(false, "所选仓库不存在", null);
+            }
+        }
+        
         User user = new User();
         user.setUsername(req.getUsername());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setRole(req.getRole());
+        
+        // Set warehouseId for drivers
+        if ("driver".equals(req.getRole())) {
+            user.setWarehouseId(req.getWarehouseId());
+        }
+        
         userMapper.insert(user);
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
