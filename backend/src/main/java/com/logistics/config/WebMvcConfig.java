@@ -21,6 +21,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/auth/login",
                     "/auth/register",
                     "/auth/test",
+                    "/warehouse/list",
                     "/error",
                     // API 文档相关路径
                     "/v3/api-docs",
