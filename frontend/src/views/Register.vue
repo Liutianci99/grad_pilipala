@@ -40,6 +40,40 @@
                     <input v-model="form.confirmPassword" type="password" class="form-input" placeholder="请再次输入密码" />
                 </div>
 
+                <template v-if="form.role === 'consumer'">
+                    <div class="section-divider">
+                        <span class="section-title">默认收货地址</span>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">收货人 <span style="color: #f4212e;">*</span></label>
+                            <input v-model="form.receiverName" type="text" class="form-input" placeholder="姓名" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">电话 <span style="color: #f4212e;">*</span></label>
+                            <input v-model="form.receiverPhone" type="tel" class="form-input" placeholder="手机号" />
+                        </div>
+                    </div>
+                    <div class="form-row form-row-3">
+                        <div class="form-group">
+                            <label class="form-label">省份 <span style="color: #f4212e;">*</span></label>
+                            <input v-model="form.province" type="text" class="form-input" placeholder="省" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">城市 <span style="color: #f4212e;">*</span></label>
+                            <input v-model="form.city" type="text" class="form-input" placeholder="市" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">区县 <span style="color: #f4212e;">*</span></label>
+                            <input v-model="form.district" type="text" class="form-input" placeholder="区" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">详细地址 <span style="color: #f4212e;">*</span></label>
+                        <input v-model="form.detailAddress" type="text" class="form-input" placeholder="街道、门牌号" />
+                    </div>
+                </template>
+
                 <button type="submit" class="sign-in-btn" :disabled="loading">
                     {{ loading ? '注册中...' : '注册' }}
                 </button>
@@ -63,12 +97,23 @@ const form = reactive({
     username: '',
     password: '',
     confirmPassword: '',
-    warehouseId: ''
+    warehouseId: '',
+    receiverName: '',
+    receiverPhone: '',
+    province: '',
+    city: '',
+    district: '',
+    detailAddress: ''
 })
 
 const handleRoleChange = () => {
-    // Clear warehouse selection when role changes
     form.warehouseId = ''
+    form.receiverName = ''
+    form.receiverPhone = ''
+    form.province = ''
+    form.city = ''
+    form.district = ''
+    form.detailAddress = ''
 }
 
 const fetchWarehouses = async () => {
@@ -82,12 +127,34 @@ const fetchWarehouses = async () => {
     }
 }
 
+const AMAP_KEY = 'a5f853c1746013a3e5ff1d3b083137e5'
+
+const getLocation = async () => {
+    try {
+        const fullAddress = `${form.province}${form.city}${form.district}${form.detailAddress}`
+        const response = await fetch(`https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(fullAddress)}&city=${encodeURIComponent(form.city)}&key=${AMAP_KEY}`)
+        const data = await response.json()
+        if (data.status === '1' && data.geocodes?.length > 0) {
+            const [lng, lat] = data.geocodes[0].location.split(',')
+            return { longitude: parseFloat(lng), latitude: parseFloat(lat) }
+        }
+        return null
+    } catch { return null }
+}
+
 const handleRegister = async () => {
     if (!form.role) return ElMessage.warning('请选择身份')
     if (form.role === 'driver' && !form.warehouseId) return ElMessage.warning('请选择所属仓库')
     if (!form.username) return ElMessage.warning('请输入用户名')
     if (!form.password) return ElMessage.warning('请输入密码')
     if (form.password !== form.confirmPassword) return ElMessage.warning('两次密码不一致')
+
+    if (form.role === 'consumer') {
+        if (!form.receiverName) return ElMessage.warning('请输入收货人姓名')
+        if (!form.receiverPhone) return ElMessage.warning('请输入收货人电话')
+        if (!form.province || !form.city || !form.district) return ElMessage.warning('请填写完整的省市区')
+        if (!form.detailAddress) return ElMessage.warning('请输入详细地址')
+    }
 
     loading.value = true
     try {
@@ -96,8 +163,6 @@ const handleRegister = async () => {
             password: form.password,
             role: form.role
         }
-        
-        // Add warehouseId for drivers
         if (form.role === 'driver') {
             payload.warehouseId = form.warehouseId
         }
@@ -107,6 +172,23 @@ const handleRegister = async () => {
         if (!data.success) {
             ElMessage.error(data.message || '注册失败')
             return
+        }
+
+        if (form.role === 'consumer' && data.data?.token) {
+            sessionStorage.setItem('token', data.data.token)
+            const location = await getLocation()
+            await request.post('/address', {
+                receiverName: form.receiverName,
+                receiverPhone: form.receiverPhone,
+                province: form.province,
+                city: form.city,
+                district: form.district,
+                detailAddress: form.detailAddress,
+                isDefault: 1,
+                latitude: location?.latitude || null,
+                longitude: location?.longitude || null
+            })
+            sessionStorage.clear()
         }
 
         ElMessage.success('注册成功，请登录')
@@ -137,7 +219,7 @@ onMounted(() => {
     border-radius: 12px;
     padding: 40px;
     width: 100%;
-    max-width: 380px;
+    max-width: 480px;
 }
 
 .login-header {
@@ -215,4 +297,20 @@ onMounted(() => {
 
 .sign-in-btn:hover:not(:disabled) { background: #262626; }
 .sign-in-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.section-divider {
+    padding-top: 8px;
+    border-top: 1px solid #eff3f4;
+}
+.section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #536471;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+@media (max-width: 640px) {
+    .form-row, .form-row-3 { grid-template-columns: 1fr; }
+}
 </style>

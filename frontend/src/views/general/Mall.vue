@@ -57,6 +57,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import request from '@/utils/request'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 
@@ -141,6 +142,18 @@ const placeOrder = async (product) => {
                 if (defaultAddress) addressId = defaultAddress.id
             }
         } catch (error) { /* continue */ }
+
+        if (!addressId) {
+            try {
+                await ElMessageBox.confirm(
+                    '您还没有设置默认收货地址，请先前往地址管理设置默认地址。',
+                    '缺少收货地址',
+                    { confirmButtonText: '去设置', cancelButtonText: '取消', type: 'warning' }
+                )
+                router.push('/consumer/address-management')
+            } catch { /* user cancelled */ }
+            return
+        }
 
         const response = await request.post('/orders/create', {
             customerId: user.id,
