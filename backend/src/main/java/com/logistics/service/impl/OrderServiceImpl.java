@@ -245,7 +245,7 @@ public class OrderServiceImpl implements OrderService {
                     .eq(Address::getUserId, order.getCustomerId().longValue())
                     .eq(Address::getIsDefault, 1)
             );
-            if (addr == null) throw new RuntimeException("顾客未设置默认收货地址: " + orderId);
+            if (addr == null) throw new com.logistics.exception.BusinessException("订单 " + orderId + " 的顾客未设置默认收货地址，请通知顾客设置后再创建批次");
             if (addr.getLongitude() == null || addr.getLatitude() == null) {
                 throw new RuntimeException("默认收货地址缺少坐标信息: " + orderId);
             }
